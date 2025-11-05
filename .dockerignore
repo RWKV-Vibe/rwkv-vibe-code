@@ -1,0 +1,15 @@
+# 依赖与产物
+node_modules
+**/node_modules
+dist
+build
+out
+
+# VCS & 杂项
+.git
+.gitignore
+.vscode
+*.log
+*.env*
+Dockerfile
+docker-compose*.yml

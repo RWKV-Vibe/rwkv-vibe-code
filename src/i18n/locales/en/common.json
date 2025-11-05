@@ -1,0 +1,39 @@
+{
+  "homepage": {
+    "title": "What would you like to create?",
+    "inputPlaceholder": "Describe your idea...",
+    "suggestions": {
+      "hotel": "Generate a hotel page in Shenzhen with a green theme",
+      "museum": "Create a Lu Xun Memorial Museum website with biography, literary works, and historical photo gallery",
+      "portfolio": "Design a minimalist personal portfolio website with modern colors and grid layout",
+      "cafe": "Create a cozy local coffee shop website with warm colors and elegant typography",
+      "saas": "Build a professional SaaS product landing page with feature descriptions and pricing plans",
+      "realEstate": "Create a high-end real estate showcase website with 3D floor plans and virtual tours",
+      "corporate": "Build a modern corporate website with team introduction and case studies",
+      "gallery": "Design an art gallery exhibition website with immersive visual presentation"
+    }
+  },
+  "chatpage": {
+    "inputPlaceholder": "Describe the webpage you want to create...",
+    "generating": "Generating...",
+    "preparingRender": "Preparing preview...",
+    "generationFailed": "Generation failed"
+  },
+  "detailpage": {
+    "back": "Back",
+    "solution": "Solution {{number}}",
+    "copyCode": "Copy Code",
+    "copied": "Copied",
+    "download": "Download",
+    "codeEditor": "HTML Code Editor",
+    "preview": "Live Preview",
+    "updateRealtime": "Code updates in real-time",
+    "copyFailed": "Copy failed"
+  },
+  "aiService": {
+    "promptPrefix": "with HTML",
+    "streamNotAvailable": "ReadableStream not available",
+    "httpError": "HTTP {{status}} {{statusText}} {{text}}",
+    "generationFailed": "Generation failed"
+  }
+}

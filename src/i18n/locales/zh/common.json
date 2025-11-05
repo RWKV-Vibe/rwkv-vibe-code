@@ -1,0 +1,39 @@
+{
+  "homepage": {
+    "title": "你想创建什么？",
+    "inputPlaceholder": "描述你的想法...",
+    "suggestions": {
+      "hotel": "生成深圳的酒店页面，绿色主题",
+      "museum": "创建一个鲁迅纪念馆网站，包含生平介绍、文学作品展示和历史照片画廊",
+      "portfolio": "设计一个极简风格的个人作品集网站，采用现代配色和网格布局",
+      "cafe": "创建一个温馨的本地咖啡馆官网，使用暖色调和优雅的排版",
+      "saas": "构建一个专业的SaaS产品落地页，包含功能介绍和定价方案",
+      "realEstate": "创建一个高端的房地产展示网站，包含3D户型图和虚拟看房",
+      "corporate": "构建一个现代化的企业官网，包含团队介绍和案例展示",
+      "gallery": "设计一个艺术画廊展览网站，采用沉浸式的视觉呈现"
+    }
+  },
+  "chatpage": {
+    "inputPlaceholder": "描述你想要创建的网页...",
+    "generating": "生成中...",
+    "preparingRender": "准备渲染预览...",
+    "generationFailed": "生成失败"
+  },
+  "detailpage": {
+    "back": "返回",
+    "solution": "方案 {{number}}",
+    "copyCode": "复制代码",
+    "copied": "已复制",
+    "download": "下载",
+    "codeEditor": "HTML 代码编辑器",
+    "preview": "实时预览",
+    "updateRealtime": "编辑代码实时更新",
+    "copyFailed": "复制失败"
+  },
+  "aiService": {
+    "promptPrefix": "用 HTML",
+    "streamNotAvailable": "ReadableStream 不可用",
+    "httpError": "HTTP {{status}} {{statusText}} {{text}}",
+    "generationFailed": "生成失败"
+  }
+}

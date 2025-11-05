@@ -1,0 +1,39 @@
+{
+  "homepage": {
+    "title": "何を作成しますか？",
+    "inputPlaceholder": "あなたのアイデアを説明してください...",
+    "suggestions": {
+      "hotel": "深圳のホテルページを生成。グリーン系のテーマ",
+      "museum": "魯迅記念館のサイトを作成。生涯紹介・文学作品の展示・歴史写真ギャラリーを含む",
+      "portfolio": "ミニマルな個人ポートフォリオをデザイン。モダンな配色とグリッドレイアウト",
+      "cafe": "温かみのあるローカルカフェの公式サイトを作成。暖色と上品なタイポグラフィ",
+      "saas": "プロフェッショナルなSaaS製品のランディングページを構築。機能紹介と価格プラン付き",
+      "realEstate": "高級不動産の紹介サイトを作成。3D間取りとバーチャル内見",
+      "corporate": "モダンな企業サイトを構築。チーム紹介と事例掲載",
+      "gallery": "アートギャラリーの展示サイトをデザイン。没入型のビジュアル表現"
+    }
+  },
+  "chatpage": {
+    "inputPlaceholder": "作りたいWebページを説明してください...",
+    "generating": "生成中...",
+    "preparingRender": "プレビューを準備中...",
+    "generationFailed": "生成に失敗しました"
+  },
+  "detailpage": {
+    "back": "戻る",
+    "solution": "ソリューション {{number}}",
+    "copyCode": "コードをコピー",
+    "copied": "コピーしました",
+    "download": "ダウンロード",
+    "codeEditor": "HTML コードエディタ",
+    "preview": "ライブプレビュー",
+    "updateRealtime": "編集内容をリアルタイム反映",
+    "copyFailed": "コピーに失敗しました"
+  },
+  "aiService": {
+    "promptPrefix": "HTMLで",
+    "streamNotAvailable": "ReadableStream は使用できません",
+    "httpError": "HTTP {{status}} {{statusText}} {{text}}",
+    "generationFailed": "生成に失敗しました"
+  }
+}
