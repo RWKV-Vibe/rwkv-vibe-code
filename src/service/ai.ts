@@ -146,8 +146,9 @@ export class AIService {
     userMessage: string,
     count: number = 24,
     onProgress?: (index: number, content: string, htmlCode: string) => void,
+    abortController?: AbortController,
   ): Promise<Array<{ content: string; htmlCode: string }>> {
-    const controller = new AbortController();
+    const controller = abortController || new AbortController();
 
     // 构建 contents 数组：将用户问题重复 count 次
     const contents = Array.from(

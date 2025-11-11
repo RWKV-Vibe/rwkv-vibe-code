@@ -75,6 +75,7 @@ export const ChatPage = () => {
   const batchSize = 8; // 后续每批渲染 8 个 iframe
   const isBatchProcessing = useRef(false); // 标记是否正在批处理中
   const resultsRef = useRef(results); // 存储最新的 results 引用
+  const abortControllerRef = useRef<AbortController | null>(null); // 用于取消正在进行的请求
 
   // 更新 resultsRef
   useEffect(() => {
@@ -207,6 +208,16 @@ export const ChatPage = () => {
   }, []);
 
   const handleGenerate = async (userPrompt: string) => {
+    // 取消之前正在进行的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      console.log('已取消之前的生成请求');
+    }
+
+    // 创建新的 AbortController
+    const newAbortController = new AbortController();
+    abortControllerRef.current = newAbortController;
+
     setPrompt(userPrompt);
     setIsGenerating(true);
 
@@ -218,7 +229,7 @@ export const ChatPage = () => {
     setIframeRenderQueue(new Set());
     isBatchProcessing.current = false;
 
-    // 初始化 20 个占位符
+    // 初始化 24 个占位符
     const placeholders: GeneratedResult[] = Array.from(
       { length: totalCount },
       (_, i) => ({
@@ -257,15 +268,25 @@ export const ChatPage = () => {
             startedIndexes.add(index);
           }
         },
+        newAbortController,
       );
-    } catch (error) {
-      console.error('生成失败:', error);
+    } catch (error: unknown) {
+      // 检查是否是用户主动取消
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('生成已被用户取消');
+      } else {
+        console.error('生成失败:', error);
+      }
       // 将所有仍在加载的卡片标记为加载完成
       setResults((prev) =>
         prev.map((result) => ({ ...result, isLoading: false })),
       );
     } finally {
-      setIsGenerating(false);
+      // 只有当前 AbortController 没有被新的请求替换时才设置为 false
+      if (abortControllerRef.current === newAbortController) {
+        setIsGenerating(false);
+        abortControllerRef.current = null;
+      }
     }
   };
 
@@ -294,7 +315,6 @@ export const ChatPage = () => {
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={t('chatpage.inputPlaceholder')}
             onSubmit={handleGenerate}
-            disabled={isGenerating}
           />
         </div>
       </div>
