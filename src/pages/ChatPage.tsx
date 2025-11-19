@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
 import { MarkdownRenderer } from '@/components/business/MarkdownRenderer';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
-import { Loader2, Sparkles } from 'lucide-react';
+import { PromptOptimizeDialog } from '@/components/business/PromptOptimizeDialog';
+import { Loader2, Wand2 } from 'lucide-react';
 import { AIService } from '@/service/ai';
 import { useTranslation } from 'react-i18next';
 
@@ -322,49 +323,22 @@ export const ChatPage = () => {
   // 将输入框区域提取为独立的 memoized 组件
   const inputPlaceholder = useMemo(() => t('chatpage.inputPlaceholder'), [t]);
 
-  // 建议选项
-  const suggestions = useMemo(
-    () => [
-      t('homepage.suggestions.hotel'),
-      t('homepage.suggestions.museum'),
-      t('homepage.suggestions.portfolio'),
-      t('homepage.suggestions.cafe'),
-      t('homepage.suggestions.saas'),
-      t('homepage.suggestions.realEstate'),
-      t('homepage.suggestions.corporate'),
-      t('homepage.suggestions.gallery'),
-    ],
-    [t],
-  );
+  // Prompt 优化相关状态
+  const [isOptimizeDialogOpen, setIsOptimizeDialogOpen] = useState(false);
 
-  // 建议下拉菜单状态
-  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
+  // 打开优化 Dialog
+  const handleOpenOptimizeDialog = useCallback(() => {
+    setIsOptimizeDialogOpen(true);
+  }, []);
 
-  // 点击外部关闭下拉框
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(event.target as Node)
-      ) {
-        setIsSuggestionsOpen(false);
-      }
-    };
+  // 关闭优化 Dialog
+  const handleCloseOptimizeDialog = useCallback(() => {
+    setIsOptimizeDialogOpen(false);
+  }, []);
 
-    if (isSuggestionsOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isSuggestionsOpen]);
-
-  // 处理建议点击
-  const handleSuggestionClick = useCallback((suggestion: string) => {
-    setPrompt(suggestion);
-    setIsSuggestionsOpen(false);
+  // 使用优化后的 Prompt
+  const handleUseOptimizedPrompt = useCallback((optimizedPrompt: string) => {
+    setPrompt(optimizedPrompt);
   }, []);
 
   return (
@@ -373,6 +347,14 @@ export const ChatPage = () => {
       <div className="fixed top-6 right-6 z-50">
         <LanguageSwitcher />
       </div>
+
+      {/* Prompt 优化 Dialog */}
+      <PromptOptimizeDialog
+        isOpen={isOptimizeDialogOpen}
+        initialPrompt={prompt}
+        onClose={handleCloseOptimizeDialog}
+        onUsePrompt={handleUseOptimizedPrompt}
+      />
 
       {/* 顶部：输入区域 */}
       <div className="border-b border-border dark:border-gray-700 bg-white dark:bg-[#252525]">
@@ -388,49 +370,18 @@ export const ChatPage = () => {
               />
             </div>
 
-            {/* 建议下拉按钮 */}
-            <div ref={suggestionsRef} className="relative flex-shrink-0">
-              <button
-                onClick={() => setIsSuggestionsOpen(!isSuggestionsOpen)}
-                className="flex items-center justify-center h-16 w-16 rounded-full
-                           bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600
-                           text-white shadow-lg hover:shadow-xl
-                           transition-all duration-200 hover:scale-105
-                           border-2 border-blue-400 dark:border-blue-400"
-                title="显示建议"
-              >
-                <Sparkles className="h-6 w-6" />
-              </button>
-
-              {isSuggestionsOpen && (
-                <div
-                  className="absolute top-full mt-2 right-0 w-[800px]
-                             bg-white dark:bg-[#2d2d2d] 
-                             rounded-xl shadow-2xl 
-                             border-2 border-gray-200 dark:border-gray-600
-                             z-50"
-                >
-                  <div className="p-8">
-                    {suggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleSuggestionClick(suggestion)}
-                        className="w-full px-10 py-8 text-left text-3xl
-                                   rounded-lg mb-4 last:mb-0
-                                   bg-white dark:bg-[#2d2d2d]
-                                   hover:bg-blue-50 dark:hover:bg-blue-900/30
-                                   text-gray-900 dark:text-gray-200
-                                   transition-colors duration-150
-                                   border border-transparent hover:border-blue-200 dark:hover:border-blue-800
-                                   leading-relaxed font-semibold"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* 魔法棒按钮 - 优化 Prompt */}
+            <button
+              onClick={handleOpenOptimizeDialog}
+              className="flex items-center justify-center h-16 w-16 rounded-full
+                         bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600
+                         text-white shadow-lg hover:shadow-xl
+                         transition-all duration-200 hover:scale-105
+                         border-2 border-purple-400 dark:border-purple-400"
+              title="优化 Prompt"
+            >
+              <Wand2 className="h-6 w-6" />
+            </button>
           </div>
         </div>
       </div>
@@ -439,7 +390,7 @@ export const ChatPage = () => {
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-[#1a1a1a]">
         <div
           className="grid grid-cols-12 gap-4 mx-auto"
-          style={{ maxWidth: '10000px' }}
+          style={{ maxWidth: '12000px' }}
         >
           {results.map((result, index) => (
             <div

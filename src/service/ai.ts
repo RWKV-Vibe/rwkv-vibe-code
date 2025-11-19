@@ -279,4 +279,119 @@ export class AIService {
       throw err;
     }
   }
+
+  // 优化 Prompt（用于网页生成）- 并行生成多个优化版本
+  static async optimizePrompt(
+    userPrompt: string,
+    count: number = 5,
+    onProgress?: (index: number, content: string) => void,
+    abortController?: AbortController,
+  ): Promise<string[]> {
+    const controller = abortController || new AbortController();
+
+    // 构建优化 prompt 的系统提示
+    const systemPrompt = `你是一个专业的网页设计 prompt 优化专家。用户会给你一个网页生成的需求描述，你需要将其优化成更详细、更专业的 prompt，帮助 AI 生成更好的网页。
+
+优化要点：
+1. 明确页面类型和风格（如：现代简约、商务专业、创意艺术等）
+2. 详细描述页面布局和结构
+3. 指定颜色方案和视觉风格
+4. 说明核心功能模块
+5. 添加交互细节和用户体验要求
+6. 确保描述清晰、具体、可执行
+
+重要：请直接输出优化后的 prompt 纯文本内容，不要使用任何代码块标记（如 \`\`\`），不要有任何多余的解释或说明文字，只输出优化后的 prompt 本身。`;
+
+    const content = `${systemPrompt}\n\nUser: ${userPrompt}\n\nAssistant:`;
+
+    // 构建 contents 数组：将优化请求重复 count 次
+    const contents = Array.from({ length: count }, () => content);
+
+    // 存储每个 index 的累积内容
+    const contentBuffers: string[] = Array.from({ length: count }, () => '');
+    const results: string[] = [];
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: contents,
+          max_tokens: 2048,
+          temperature: 0.8,
+          top_k: 1,
+          top_p: 0.5,
+          stream: true,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(
+          i18n.t('aiService.httpError', {
+            status: response.status,
+            statusText: response.statusText,
+            text,
+          }),
+        );
+      }
+
+      if (!response.body) {
+        throw new Error(i18n.t('aiService.streamNotAvailable'));
+      }
+
+      const reader: ReadableStreamDefaultReader<Uint8Array> =
+        response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let partial = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        partial += chunk;
+
+        const lines = partial.split('\n');
+        partial = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+
+          try {
+            const json: StreamChunk = JSON.parse(data);
+            if (json.choices && json.choices.length > 0) {
+              for (const choice of json.choices) {
+                const index = choice.index;
+                const delta = choice.delta?.content ?? '';
+
+                if (delta && index >= 0 && index < count) {
+                  contentBuffers[index] += delta;
+                  if (onProgress) {
+                    onProgress(index, contentBuffers[index]);
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            console.warn('Failed to parse JSON:', err);
+          }
+        }
+      }
+
+      // 构建最终结果
+      for (let i = 0; i < count; i++) {
+        results.push(contentBuffers[i].trim());
+      }
+
+      return results;
+    } catch (err: unknown) {
+      console.error('Prompt optimization failed:', err);
+      throw err;
+    }
+  }
 }
