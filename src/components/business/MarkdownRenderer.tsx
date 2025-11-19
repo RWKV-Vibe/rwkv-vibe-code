@@ -9,7 +9,7 @@ interface MarkdownRendererProps {
 
 export const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
   return (
-    <div className="markdown-body prose prose-sm max-w-none dark:prose-invert">
+    <div className="markdown-body prose prose-sm max-w-none dark:prose-invert bg-white dark:bg-transparent text-gray-900 dark:text-gray-200">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
@@ -30,34 +30,38 @@ export const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
           },
           pre({ children }) {
             return (
-              <pre className="bg-[#1e1e1e] dark:bg-[#0d1117] rounded-xl p-5 overflow-x-auto my-4 border border-gray-200 dark:border-gray-800 shadow-lg">
+              <pre className="bg-gray-50 dark:bg-[#0d1117] rounded-xl p-5 overflow-x-auto my-4 border border-gray-200 dark:border-gray-800 shadow-lg">
                 {children}
               </pre>
             );
           },
           p({ children }) {
             return (
-              <p className="mb-3 last:mb-0 leading-relaxed text-gray-800 dark:text-gray-200">
+              <p className="mb-3 last:mb-0 leading-relaxed text-gray-900 dark:text-gray-200">
                 {children}
               </p>
             );
           },
           ul({ children }) {
             return (
-              <ul className="list-disc list-outside ml-5 mb-3 space-y-1.5 text-gray-800 dark:text-gray-200">
+              <ul className="list-disc list-outside ml-5 mb-3 space-y-1.5 text-gray-900 dark:text-gray-200">
                 {children}
               </ul>
             );
           },
           ol({ children }) {
             return (
-              <ol className="list-decimal list-outside ml-5 mb-3 space-y-1.5 text-gray-800 dark:text-gray-200">
+              <ol className="list-decimal list-outside ml-5 mb-3 space-y-1.5 text-gray-900 dark:text-gray-200">
                 {children}
               </ol>
             );
           },
           li({ children }) {
-            return <li className="leading-relaxed">{children}</li>;
+            return (
+              <li className="leading-relaxed text-gray-900 dark:text-gray-200">
+                {children}
+              </li>
+            );
           },
           h1({ children }) {
             return (
@@ -89,7 +93,7 @@ export const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
           },
           blockquote({ children }) {
             return (
-              <blockquote className="border-l-4 border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 pl-4 pr-4 py-2 italic my-3 rounded-r-lg text-gray-700 dark:text-gray-300">
+              <blockquote className="border-l-4 border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 pl-4 pr-4 py-2 italic my-3 rounded-r-lg text-gray-800 dark:text-gray-300">
                 {children}
               </blockquote>
             );
@@ -146,7 +150,7 @@ export const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
           },
           td({ children }) {
             return (
-              <td className="px-4 py-3 text-sm text-gray-800 dark:text-gray-200">
+              <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-200">
                 {children}
               </td>
             );
@@ -160,7 +164,7 @@ export const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
           },
           em({ children }) {
             return (
-              <em className="italic text-gray-800 dark:text-gray-200">
+              <em className="italic text-gray-900 dark:text-gray-200">
                 {children}
               </em>
             );
