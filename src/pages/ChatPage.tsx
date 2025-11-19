@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
 import { MarkdownRenderer } from '@/components/business/MarkdownRenderer';
+import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Loader2, Sparkles } from 'lucide-react';
 import { AIService } from '@/service/ai';
 import { useTranslation } from 'react-i18next';
@@ -368,6 +369,11 @@ export const ChatPage = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background dark:bg-[#1e1e1e]">
+      {/* Language Switcher - 右上角 */}
+      <div className="fixed top-6 right-6 z-50">
+        <LanguageSwitcher />
+      </div>
+
       {/* 顶部：输入区域 */}
       <div className="border-b border-border dark:border-gray-700 bg-white dark:bg-[#252525]">
         <div className="max-w-[1400px] mx-auto p-6">
