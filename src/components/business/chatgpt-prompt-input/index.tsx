@@ -13,7 +13,7 @@ interface ChatgptPromptInputProps
   disabled?: boolean;
 }
 
-export const ChatgptPromptInput = React.forwardRef<
+const ChatgptPromptInputComponent = React.forwardRef<
   HTMLTextAreaElement,
   ChatgptPromptInputProps
 >(({ className, onSubmit, disabled = false, ...props }, ref) => {
@@ -51,6 +51,19 @@ export const ChatgptPromptInput = React.forwardRef<
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (
+      e.key === 'Enter' &&
+      !e.shiftKey &&
+      !(e.nativeEvent as KeyboardEvent).isComposing &&
+      !disabled
+    ) {
+      e.preventDefault();
+      handleSubmit();
+    }
+    if (props.onKeyDown) props.onKeyDown(e);
+  };
+
   return (
     <div
       className={cn(
@@ -63,18 +76,7 @@ export const ChatgptPromptInput = React.forwardRef<
         rows={1}
         value={value}
         onChange={handleInputChange}
-        onKeyDown={(e) => {
-          if (
-            e.key === 'Enter' &&
-            !e.shiftKey &&
-            !e.nativeEvent.isComposing &&
-            !disabled
-          ) {
-            e.preventDefault();
-            handleSubmit();
-          }
-          if (props.onKeyDown) props.onKeyDown(e);
-        }}
+        onKeyDown={handleKeyDown}
         disabled={disabled}
         placeholder="描述你想要创建的网页..."
         className="custom-scrollbar flex-1 resize-none border-0 bg-transparent text-3xl text-foreground dark:text-white placeholder:text-muted-foreground dark:placeholder:text-gray-400 focus:ring-0 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
@@ -95,4 +97,18 @@ export const ChatgptPromptInput = React.forwardRef<
   );
 });
 
-ChatgptPromptInput.displayName = 'ChatgptPromptInput';
+ChatgptPromptInputComponent.displayName = 'ChatgptPromptInput';
+
+// 使用 React.memo 包装组件，避免不必要的重渲染
+// 自定义比较函数，只比较基本值类型的 props，不比较函数引用
+export const ChatgptPromptInput = React.memo(
+  ChatgptPromptInputComponent,
+  (prevProps, nextProps) => {
+    // 只比较基本值类型的 props，如果都相等则返回 true（不重新渲染）
+    return (
+      prevProps.value === nextProps.value &&
+      prevProps.disabled === nextProps.disabled &&
+      prevProps.placeholder === nextProps.placeholder
+    );
+  },
+);

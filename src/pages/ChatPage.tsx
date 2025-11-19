@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
 import { MarkdownRenderer } from '@/components/business/MarkdownRenderer';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { AIService } from '@/service/ai';
 import { useTranslation } from 'react-i18next';
 
@@ -207,115 +207,225 @@ export const ChatPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleGenerate = async (userPrompt: string) => {
-    // 取消之前正在进行的请求
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      console.log('已取消之前的生成请求');
-    }
-
-    // 创建新的 AbortController
-    const newAbortController = new AbortController();
-    abortControllerRef.current = newAbortController;
-
-    setPrompt(userPrompt);
-    setIsGenerating(true);
-
-    // 清除旧的结果和标记
-    sessionStorage.removeItem('chatPageResults');
-    sessionStorage.removeItem('hasProcessedInitialMessage');
-
-    // 清空 iframe 渲染队列，重置批处理标记
-    setIframeRenderQueue(new Set());
-    isBatchProcessing.current = false;
-
-    // 初始化 24 个占位符
-    const placeholders: GeneratedResult[] = Array.from(
-      { length: totalCount },
-      (_, i) => ({
-        id: `result-${i}`,
-        content: '',
-        htmlCode: DEFAULT_HTML,
-        isLoading: true,
-      }),
-    );
-    setResults(placeholders);
-
-    // 追踪哪些index已经开始接收数据（用于计数）
-    const startedIndexes = new Set<number>();
-
-    try {
-      await AIService.generateMultipleResponses(
-        userPrompt,
-        totalCount,
-        (index, content, htmlCode) => {
-          // 实时更新每个结果
-          setResults((prev) =>
-            prev.map((result, i) =>
-              i === index
-                ? {
-                    ...result,
-                    content,
-                    htmlCode,
-                    isLoading: false,
-                  }
-                : result,
-            ),
-          );
-
-          // 标记该index已开始接收数据
-          if (!startedIndexes.has(index)) {
-            startedIndexes.add(index);
-          }
-        },
-        newAbortController,
-      );
-    } catch (error: unknown) {
-      // 检查是否是用户主动取消
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('生成已被用户取消');
-      } else {
-        console.error('生成失败:', error);
+  const handleGenerate = useCallback(
+    async (userPrompt: string) => {
+      // 取消之前正在进行的请求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        console.log('已取消之前的生成请求');
       }
-      // 将所有仍在加载的卡片标记为加载完成
-      setResults((prev) =>
-        prev.map((result) => ({ ...result, isLoading: false })),
+
+      // 创建新的 AbortController
+      const newAbortController = new AbortController();
+      abortControllerRef.current = newAbortController;
+
+      setPrompt(userPrompt);
+      setIsGenerating(true);
+
+      // 清除旧的结果和标记
+      sessionStorage.removeItem('chatPageResults');
+      sessionStorage.removeItem('hasProcessedInitialMessage');
+
+      // 清空 iframe 渲染队列，重置批处理标记
+      setIframeRenderQueue(new Set());
+      isBatchProcessing.current = false;
+
+      // 初始化 24 个占位符
+      const placeholders: GeneratedResult[] = Array.from(
+        { length: totalCount },
+        (_, i) => ({
+          id: `result-${i}`,
+          content: '',
+          htmlCode: DEFAULT_HTML,
+          isLoading: true,
+        }),
       );
-    } finally {
-      // 只有当前 AbortController 没有被新的请求替换时才设置为 false
-      if (abortControllerRef.current === newAbortController) {
-        setIsGenerating(false);
-        abortControllerRef.current = null;
+      setResults(placeholders);
+
+      // 追踪哪些index已经开始接收数据（用于计数）
+      const startedIndexes = new Set<number>();
+
+      try {
+        await AIService.generateMultipleResponses(
+          userPrompt,
+          totalCount,
+          (index, content, htmlCode) => {
+            // 实时更新每个结果
+            setResults((prev) =>
+              prev.map((result, i) =>
+                i === index
+                  ? {
+                      ...result,
+                      content,
+                      htmlCode,
+                      isLoading: false,
+                    }
+                  : result,
+              ),
+            );
+
+            // 标记该index已开始接收数据
+            if (!startedIndexes.has(index)) {
+              startedIndexes.add(index);
+            }
+          },
+          newAbortController,
+        );
+      } catch (error: unknown) {
+        // 检查是否是用户主动取消
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('生成已被用户取消');
+        } else {
+          console.error('生成失败:', error);
+        }
+        // 将所有仍在加载的卡片标记为加载完成
+        setResults((prev) =>
+          prev.map((result) => ({ ...result, isLoading: false })),
+        );
+      } finally {
+        // 只有当前 AbortController 没有被新的请求替换时才设置为 false
+        if (abortControllerRef.current === newAbortController) {
+          setIsGenerating(false);
+          abortControllerRef.current = null;
+        }
       }
-    }
-  };
+    },
+    [totalCount],
+  );
 
-  const handleOpenDetail = (index: number) => {
-    if (results[index] && !results[index].isLoading) {
-      // 保存当前状态到 sessionStorage，确保返回时不会丢失
-      sessionStorage.setItem('chatPageResults', JSON.stringify(results));
-      sessionStorage.setItem('chatPagePrompt', prompt);
+  const handleOpenDetail = useCallback(
+    (index: number) => {
+      if (results[index] && !results[index].isLoading) {
+        // 保存当前状态到 sessionStorage，确保返回时不会丢失
+        sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+        sessionStorage.setItem('chatPagePrompt', prompt);
 
-      navigate('/detail', {
-        state: {
-          htmlCode: results[index].htmlCode,
-          index: index,
-        },
-      });
+        navigate('/detail', {
+          state: {
+            htmlCode: results[index].htmlCode,
+            index: index,
+          },
+        });
+      }
+    },
+    [results, prompt, navigate],
+  );
+
+  const handlePromptChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setPrompt(e.target.value);
+    },
+    [],
+  );
+
+  // 将输入框区域提取为独立的 memoized 组件
+  const inputPlaceholder = useMemo(() => t('chatpage.inputPlaceholder'), [t]);
+
+  // 建议选项
+  const suggestions = useMemo(
+    () => [
+      t('homepage.suggestions.hotel'),
+      t('homepage.suggestions.museum'),
+      t('homepage.suggestions.portfolio'),
+      t('homepage.suggestions.cafe'),
+      t('homepage.suggestions.saas'),
+      t('homepage.suggestions.realEstate'),
+      t('homepage.suggestions.corporate'),
+      t('homepage.suggestions.gallery'),
+    ],
+    [t],
+  );
+
+  // 建议下拉菜单状态
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // 点击外部关闭下拉框
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node)
+      ) {
+        setIsSuggestionsOpen(false);
+      }
+    };
+
+    if (isSuggestionsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
     }
-  };
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSuggestionsOpen]);
+
+  // 处理建议点击
+  const handleSuggestionClick = useCallback((suggestion: string) => {
+    setPrompt(suggestion);
+    setIsSuggestionsOpen(false);
+  }, []);
 
   return (
     <div className="flex flex-col h-screen bg-background dark:bg-[#1e1e1e]">
       {/* 顶部：输入区域 */}
       <div className="border-b border-border dark:border-gray-700 bg-white dark:bg-[#252525]">
         <div className="max-w-[1400px] mx-auto p-6">
-          <ChatgptPromptInput
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder={t('chatpage.inputPlaceholder')}
-            onSubmit={handleGenerate}
-          />
+          <div className="flex items-center gap-4">
+            {/* 输入框 */}
+            <div className="flex-1">
+              <ChatgptPromptInput
+                value={prompt}
+                onChange={handlePromptChange}
+                placeholder={inputPlaceholder}
+                onSubmit={handleGenerate}
+              />
+            </div>
+
+            {/* 建议下拉按钮 */}
+            <div ref={suggestionsRef} className="relative flex-shrink-0">
+              <button
+                onClick={() => setIsSuggestionsOpen(!isSuggestionsOpen)}
+                className="flex items-center justify-center h-16 w-16 rounded-full
+                           bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600
+                           text-white shadow-lg hover:shadow-xl
+                           transition-all duration-200 hover:scale-105
+                           border-2 border-blue-400 dark:border-blue-400"
+                title="显示建议"
+              >
+                <Sparkles className="h-6 w-6" />
+              </button>
+
+              {isSuggestionsOpen && (
+                <div
+                  className="absolute top-full mt-2 right-0 w-[800px]
+                             bg-white dark:bg-[#2d2d2d] 
+                             rounded-xl shadow-2xl 
+                             border-2 border-gray-200 dark:border-gray-600
+                             z-50"
+                >
+                  <div className="p-8">
+                    {suggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className="w-full px-10 py-8 text-left text-3xl
+                                   rounded-lg mb-4 last:mb-0
+                                   bg-white dark:bg-[#2d2d2d]
+                                   hover:bg-blue-50 dark:hover:bg-blue-900/30
+                                   text-gray-900 dark:text-gray-200
+                                   transition-colors duration-150
+                                   border border-transparent hover:border-blue-200 dark:hover:border-blue-800
+                                   leading-relaxed font-semibold"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
