@@ -10,7 +10,29 @@ interface StreamChunk {
   }[];
 }
 
-const API_URL = import.meta.env.PUBLIC_RWKV_API_URL;
+interface AuthConfig {
+  apiUrl: string;
+  password: string;
+}
+
+const STORAGE_KEY = 'rwkv_auth_config';
+
+// 获取认证配置
+const getAuthConfig = (): AuthConfig => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+  }
+  // 回退到环境变量
+  return {
+    apiUrl: import.meta.env.PUBLIC_RWKV_API_URL || '',
+    password: '',
+  };
+};
 
 export class AIService {
   // 提取HTML代码并自动闭合标签
@@ -164,7 +186,8 @@ export class AIService {
     const results: Array<{ content: string; htmlCode: string }> = [];
 
     try {
-      const response = await fetch(API_URL, {
+      const authConfig = getAuthConfig();
+      const response = await fetch(authConfig.apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -179,6 +202,7 @@ export class AIService {
           alpha_decay: 0.996,
           chunk_size: 128,
           stream: true,
+          password: authConfig.password,
         }),
         signal: controller.signal,
       });
@@ -312,7 +336,8 @@ export class AIService {
     const results: string[] = [];
 
     try {
-      const response = await fetch(API_URL, {
+      const authConfig = getAuthConfig();
+      const response = await fetch(authConfig.apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -323,6 +348,7 @@ export class AIService {
           top_p: 0.5,
           stream: true,
           enable_think: false,
+          password: authConfig.password,
         }),
         signal: controller.signal,
       });

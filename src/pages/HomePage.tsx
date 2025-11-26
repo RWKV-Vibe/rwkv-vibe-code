@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
+import { useAuth } from '@/contexts/AuthContext';
+import { Trash2 } from 'lucide-react';
 
 export const HomePage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { logout } = useAuth();
   const [inputValue, setInputValue] = useState('');
 
   const suggestions = [
@@ -36,10 +39,34 @@ export const HomePage = () => {
     }
   };
 
+  const handleClearCache = () => {
+    if (confirm('确定要清除所有缓存吗？这将退出登录并清除所有本地数据。')) {
+      // 清除认证信息
+      logout();
+      // 清除其他缓存
+      sessionStorage.clear();
+      // 页面会自动重定向到登录页面
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/20 dark:from-[#212121] dark:to-[#212121] px-8 md:px-16 lg:px-24 xl:px-32 py-16">
-      {/* Language Switcher - 右上角 */}
-      <div className="fixed top-6 right-6 z-50">
+      {/* 右上角按钮组 */}
+      <div className="fixed top-6 right-6 z-50 flex items-center gap-4">
+        {/* 清除缓存按钮 */}
+        <button
+          onClick={handleClearCache}
+          className="flex items-center justify-center h-16 w-16 rounded-full
+                     bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600
+                     text-white shadow-lg hover:shadow-xl
+                     transition-all duration-200 hover:scale-105
+                     border-2 border-red-400 dark:border-red-400"
+          title="清除缓存"
+        >
+          <Trash2 className="h-6 w-6" />
+        </button>
+
+        {/* 语言切换器 */}
         <LanguageSwitcher />
       </div>
 
