@@ -27,12 +27,25 @@ export const DetailPage = () => {
 
   // 从 URL 查询参数获取 index
   const searchParams = new URLSearchParams(location.search);
-  const resultIndex = searchParams.get('index') ? parseInt(searchParams.get('index')!) : undefined;
+  const resultIndex = searchParams.get('index')
+    ? parseInt(searchParams.get('index')!)
+    : undefined;
 
-  // 从路由状态或默认值获取初始数据
-  const [initialHtmlCode, setInitialHtmlCode] = useState(
-    (location.state as { htmlCode?: string })?.htmlCode || DEFAULT_HTML
-  );
+  // 从 sessionStorage 获取初始数据
+  const [initialHtmlCode] = useState(() => {
+    if (resultIndex !== undefined) {
+      const saved = sessionStorage.getItem(`detail-${resultIndex}`);
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          return data.htmlCode || DEFAULT_HTML;
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return (location.state as { htmlCode?: string })?.htmlCode || DEFAULT_HTML;
+  });
 
   const [htmlCode, setHtmlCode] = useState(initialHtmlCode);
   const [copied, setCopied] = useState(false);
@@ -40,32 +53,45 @@ export const DetailPage = () => {
   const [hasUserEdited, setHasUserEdited] = useState(false);
   const [isLiveUpdating, setIsLiveUpdating] = useState(false);
 
-  // 监听 BroadcastChannel 接收初始数据和实时更新
+  // 监听 BroadcastChannel 接收实时更新
   useEffect(() => {
+    if (resultIndex === undefined) return;
+
     const channel = new BroadcastChannel('rwkv-detail-channel');
-    
+
+    // 检查是否正在生成
+    const globalState = (window as any).__chatPageGlobalState;
+    if (globalState && globalState.isGenerating) {
+      setIsLiveUpdating(true);
+
+      // 从 updateBuffer 获取最新内容
+      const updateBuffer = globalState.updateBuffer;
+      if (updateBuffer && updateBuffer.has(resultIndex)) {
+        const latestUpdate = updateBuffer.get(resultIndex);
+        if (latestUpdate && latestUpdate.htmlCode && !hasUserEdited) {
+          setHtmlCode(latestUpdate.htmlCode);
+        }
+      }
+    }
+
     channel.onmessage = (event) => {
       const { type, index, htmlCode: newHtmlCode } = event.data;
-      
+
       // 只处理与当前 index 匹配的消息
       if (index !== resultIndex) return;
-      
-      if (type === 'INIT_DETAIL' && newHtmlCode) {
-        setInitialHtmlCode(newHtmlCode);
-        if (!hasUserEdited) {
-          setHtmlCode(newHtmlCode);
-        }
-      } else if (type === 'UPDATE_CONTENT' && newHtmlCode && !hasUserEdited) {
+
+      if (type === 'UPDATE_CONTENT' && newHtmlCode && !hasUserEdited) {
         setHtmlCode(newHtmlCode);
         setIsLiveUpdating(true);
+        console.log(`DetailPage 收到更新: index ${index}`);
       } else if (type === 'GENERATION_COMPLETE') {
         setIsLiveUpdating(false);
+        console.log('DetailPage: 生成完成');
       }
     };
 
     return () => channel.close();
   }, [resultIndex, hasUserEdited]);
-
 
   // 监听用户编辑
   const handleEditorChange = (value: string | undefined) => {

@@ -420,32 +420,22 @@ export const ChatPage = () => {
         // 获取最新的 htmlCode（优先从 buffer 中获取）
         const latestUpdate = updateBuffer.current.get(index);
         const htmlCodeToUse = latestUpdate?.htmlCode || results[index].htmlCode;
+        const contentToUse = latestUpdate?.content || results[index].content;
+
+        // 先保存到 sessionStorage，作为初始数据
+        const detailData = {
+          index,
+          htmlCode: htmlCodeToUse,
+          content: contentToUse,
+          timestamp: Date.now(),
+        };
+        sessionStorage.setItem(`detail-${index}`, JSON.stringify(detailData));
 
         // 构建新标签页的 URL，使用查询参数传递 index
         const detailUrl = `/detail?index=${index}`;
 
         // 在新标签页中打开
-        const newWindow = window.open(
-          detailUrl,
-          `detail-${index}`,
-          'noopener,noreferrer',
-        );
-
-        if (newWindow) {
-          // 等待新窗口加载完成后，通过 BroadcastChannel 发送数据
-          const channel = new BroadcastChannel('rwkv-detail-channel');
-
-          // 延迟发送，确保新窗口已经监听
-          setTimeout(() => {
-            channel.postMessage({
-              type: 'INIT_DETAIL',
-              index: index,
-              htmlCode: htmlCodeToUse,
-              content: latestUpdate?.content || results[index].content,
-            });
-            channel.close();
-          }, 100);
-        }
+        window.open(detailUrl, `detail-${index}`, 'noopener,noreferrer');
 
         // 在空闲时保存状态
         const saveState = () => {
