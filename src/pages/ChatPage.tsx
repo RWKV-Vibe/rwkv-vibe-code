@@ -72,10 +72,7 @@ export const ChatPage = () => {
   });
   const completedTaskCount = completedIndexes.size;
 
-  // 标记是否是第一次渲染（页面会话的第一次生成）
-  const hasRenderedOnce = useRef(false);
-
-  const batchSize = 4; // 后续每批渲染 4 个 iframe（减少渲染压力）
+  const batchSize = 3; // 每批渲染 3 个 iframe（减少渲染压力）
   const isBatchProcessing = useRef(false); // 标记是否正在批处理中
   const resultsRef = useRef(results); // 存储最新的 results 引用
 
@@ -175,7 +172,7 @@ export const ChatPage = () => {
     }
   }, [results, isGenerating]);
 
-  // iframe 渲染队列管理 - 逐步加载 iframe
+  // iframe 渲染队列管理 - 始终逐步加载 iframe
   useEffect(() => {
     // 找出所有已经有内容（不再 loading）的结果索引
     const readyIndexes = results
@@ -193,14 +190,7 @@ export const ChatPage = () => {
       return; // 没有需要处理的
     }
 
-    // 第一次渲染：一次性全部加载
-    if (!hasRenderedOnce.current) {
-      setIframeRenderQueue(new Set(readyIndexes));
-      hasRenderedOnce.current = true;
-      return;
-    }
-
-    // 后续渲染：如果没有正在进行的批处理，启动新的批处理
+    // 如果没有正在进行的批处理，启动新的批处理
     if (!isBatchProcessing.current) {
       isBatchProcessing.current = true;
 
@@ -228,9 +218,13 @@ export const ChatPage = () => {
           const toAdd = stillNotInQueue.slice(0, batchSize);
           toAdd.forEach((index) => newQueue.add(index));
 
-          // 如果还有剩余，继续下一批（增加间隔时间以减轻渲染压力）
+          console.log(
+            `渲染批次: 添加 ${toAdd.length} 个 iframe，当前队列大小: ${newQueue.size}`,
+          );
+
+          // 如果还有剩余，继续下一批
           if (stillNotInQueue.length > batchSize) {
-            setTimeout(processBatch, 800);
+            setTimeout(processBatch, 600);
           } else {
             isBatchProcessing.current = false;
           }
@@ -239,6 +233,7 @@ export const ChatPage = () => {
         });
       };
 
+      // 立即开始第一批
       processBatch();
     }
   }, [results, iframeRenderQueue, batchSize]);
@@ -318,11 +313,13 @@ export const ChatPage = () => {
       // BroadcastChannel 用于跨标签页通信
       const broadcastChannel = new BroadcastChannel('rwkv-detail-channel');
 
-      // 批量更新函数 - 使用 requestAnimationFrame 确保在渲染帧之间更新
+      // 批量更新函数
       const flushUpdates = () => {
         if (updateBuffer.current.size > 0) {
           const updates = new Map(updateBuffer.current);
           updateBuffer.current.clear();
+
+          console.log(`批量更新: ${updates.size} 个结果`);
 
           // 广播更新到所有打开的 DetailPage
           updates.forEach((update, index) => {
@@ -334,22 +331,20 @@ export const ChatPage = () => {
             });
           });
 
-          // 使用 requestAnimationFrame 在下一帧更新，避免阻塞当前帧
-          requestAnimationFrame(() => {
-            setResults((prev) =>
-              prev.map((result, i) => {
-                const update = updates.get(i);
-                return update
-                  ? {
-                      ...result,
-                      content: update.content,
-                      htmlCode: update.htmlCode,
-                      isLoading: false,
-                    }
-                  : result;
-              }),
-            );
-          });
+          // 直接更新，不使用 requestAnimationFrame
+          setResults((prev) =>
+            prev.map((result, i) => {
+              const update = updates.get(i);
+              return update
+                ? {
+                    ...result,
+                    content: update.content,
+                    htmlCode: update.htmlCode,
+                    isLoading: false,
+                  }
+                : result;
+            }),
+          );
         }
       };
 
@@ -368,15 +363,18 @@ export const ChatPage = () => {
                 newSet.add(index);
                 return newSet;
               });
+              console.log(
+                `任务完成: #${index}, 总完成数: ${completedIndexes.size + 1}`,
+              );
             }
 
-            // 使用节流：每 500ms 批量更新一次（减少渲染频率）
+            // 使用节流：每 300ms 批量更新一次
             if (updateTimeoutRef.current) {
               clearTimeout(updateTimeoutRef.current);
             }
             updateTimeoutRef.current = setTimeout(() => {
               flushUpdates();
-            }, 500);
+            }, 300);
           },
           newAbortController,
         );
