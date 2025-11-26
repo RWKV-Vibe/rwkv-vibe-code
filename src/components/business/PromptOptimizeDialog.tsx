@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect, memo } from 'react';
-import { Wand2, Copy, X, Loader2, Check } from 'lucide-react';
+import { useState, useRef, useCallback, useEffect, memo, useMemo } from 'react';
+import { Wand2, Copy, X, Loader2, Check, Square } from 'lucide-react';
 import { AIService } from '@/service/ai';
 
 interface PromptOptimizeDialogProps {
@@ -98,6 +98,19 @@ export const PromptOptimizeDialog = memo(
         });
     }, [optimizeInput]);
 
+    // 终止生成
+    const handleStopOptimize = useCallback(() => {
+      if (optimizeAbortControllerRef.current) {
+        optimizeAbortControllerRef.current.abort();
+        optimizeAbortControllerRef.current = null;
+      }
+      setIsOptimizing(false);
+      // 将所有仍在加载的结果标记为加载完成（已取消）
+      setOptimizedResults((prev) =>
+        prev.map((result) => ({ ...result, isLoading: false })),
+      );
+    }, []);
+
     // 关闭 Dialog
     const handleClose = useCallback(() => {
       if (optimizeAbortControllerRef.current) {
@@ -108,6 +121,16 @@ export const PromptOptimizeDialog = memo(
       setCopiedIndex(null);
       onClose();
     }, [onClose]);
+
+    // 计算正在运行的任务数
+    const runningTaskCount = useMemo(() => {
+      return optimizedResults.filter((result) => result.isLoading).length;
+    }, [optimizedResults]);
+
+    // 计算已完成的任务数
+    const completedTaskCount = useMemo(() => {
+      return optimizedResults.filter((result) => !result.isLoading && result.content).length;
+    }, [optimizedResults]);
 
     // 复制指定索引的优化后的 Prompt
     const handleCopyOptimized = useCallback(
@@ -160,21 +183,59 @@ export const PromptOptimizeDialog = memo(
             {/* 输入区域 */}
             <div className="mb-4 flex-shrink-0">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-5xl font-bold text-gray-700 dark:text-gray-300">
-                  输入你的需求：
-                </h3>
-                <button
-                  onClick={handleStartOptimize}
-                  disabled={!optimizeInput.trim() || isOptimizing}
-                  className="flex items-center gap-5 px-12 py-6 rounded-2xl text-4xl font-bold
-                             bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600
-                             text-white transition-all duration-200 hover:scale-105
-                             disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-                             shadow-xl flex-shrink-0"
-                >
-                  <Wand2 className="h-10 w-10" />
-                  {isOptimizing ? '生成中...' : '生成优化'}
-                </button>
+                <div className="flex items-center gap-6">
+                  <h3 className="text-5xl font-bold text-gray-700 dark:text-gray-300">
+                    输入你的需求：
+                  </h3>
+                  {/* 任务状态显示 */}
+                  {optimizedResults.length > 0 && (
+                    <div className="flex items-center gap-3 px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                      {isOptimizing ? (
+                        <>
+                          <Loader2 className="h-8 w-8 animate-spin text-purple-600 dark:text-purple-400" />
+                          <span className="text-3xl font-semibold text-purple-600 dark:text-purple-400">
+                            正在生成 {runningTaskCount}/{totalCount}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+                          <span className="text-3xl font-semibold text-green-600 dark:text-green-400">
+                            已完成 {completedTaskCount}/{totalCount}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-4">
+                  {/* 终止生成按钮 */}
+                  {isOptimizing && (
+                    <button
+                      onClick={handleStopOptimize}
+                      className="flex items-center gap-5 px-12 py-6 rounded-2xl text-4xl font-bold
+                                 bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600
+                                 text-white transition-all duration-200 hover:scale-105
+                                 shadow-xl flex-shrink-0"
+                    >
+                      <Square className="h-10 w-10" />
+                      终止生成
+                    </button>
+                  )}
+                  {/* 生成优化按钮 */}
+                  <button
+                    onClick={handleStartOptimize}
+                    disabled={!optimizeInput.trim() || isOptimizing}
+                    className="flex items-center gap-5 px-12 py-6 rounded-2xl text-4xl font-bold
+                               bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600
+                               text-white transition-all duration-200 hover:scale-105
+                               disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
+                               shadow-xl flex-shrink-0"
+                  >
+                    <Wand2 className="h-10 w-10" />
+                    {isOptimizing ? '生成中...' : '生成优化'}
+                  </button>
+                </div>
               </div>
               <textarea
                 value={optimizeInput}

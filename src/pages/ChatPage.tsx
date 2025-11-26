@@ -4,7 +4,7 @@ import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
 import { MarkdownRenderer } from '@/components/business/MarkdownRenderer';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { PromptOptimizeDialog } from '@/components/business/PromptOptimizeDialog';
-import { Loader2, Wand2 } from 'lucide-react';
+import { Loader2, Wand2, Square, Check } from 'lucide-react';
 import { AIService } from '@/service/ai';
 import { useTranslation } from 'react-i18next';
 
@@ -341,6 +341,29 @@ export const ChatPage = () => {
     setPrompt(optimizedPrompt);
   }, []);
 
+  // 计算正在运行的任务数
+  const runningTaskCount = useMemo(() => {
+    return results.filter((result) => result.isLoading).length;
+  }, [results]);
+
+  // 计算已完成的任务数
+  const completedTaskCount = useMemo(() => {
+    return results.filter((result) => !result.isLoading && result.htmlCode).length;
+  }, [results]);
+
+  // 终止生成
+  const handleStopGenerate = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsGenerating(false);
+    // 将所有仍在加载的结果标记为加载完成
+    setResults((prev) =>
+      prev.map((result) => ({ ...result, isLoading: false })),
+    );
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-background dark:bg-[#1e1e1e]">
       {/* Language Switcher - 右上角 */}
@@ -382,6 +405,45 @@ export const ChatPage = () => {
             >
               <Wand2 className="h-6 w-6" />
             </button>
+
+            {/* 任务状态和终止按钮 */}
+            {results.length > 0 && (
+              <div className="flex items-center gap-6">
+                {/* 任务状态显示 */}
+                <div className="flex items-center gap-4 px-8 py-4 bg-gray-100 dark:bg-gray-800 rounded-full">
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-10 w-10 animate-spin text-blue-600 dark:text-blue-400" />
+                      <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                        {completedTaskCount}/{totalCount}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-10 w-10 text-green-600 dark:text-green-400" />
+                      <span className="text-4xl font-bold text-green-600 dark:text-green-400">
+                        {completedTaskCount}/{totalCount}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* 终止生成按钮 */}
+                {isGenerating && (
+                  <button
+                    onClick={handleStopGenerate}
+                    className="flex items-center justify-center h-20 w-20 rounded-full
+                               bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600
+                               text-white shadow-lg hover:shadow-xl
+                               transition-all duration-200 hover:scale-105
+                               border-2 border-red-400 dark:border-red-400"
+                    title="终止生成"
+                  >
+                    <Square className="h-10 w-10" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
