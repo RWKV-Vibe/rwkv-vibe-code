@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
 import { MarkdownRenderer } from '@/components/business/MarkdownRenderer';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
@@ -35,7 +35,6 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 
 export const ChatPage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const initialMessage = (location.state as { initialMessage?: string })
     ?.initialMessage;
@@ -76,7 +75,7 @@ export const ChatPage = () => {
   // 标记是否是第一次渲染（页面会话的第一次生成）
   const hasRenderedOnce = useRef(false);
 
-  const batchSize = 8; // 后续每批渲染 8 个 iframe
+  const batchSize = 4; // 后续每批渲染 4 个 iframe（减少渲染压力）
   const isBatchProcessing = useRef(false); // 标记是否正在批处理中
   const resultsRef = useRef(results); // 存储最新的 results 引用
 
@@ -229,9 +228,9 @@ export const ChatPage = () => {
           const toAdd = stillNotInQueue.slice(0, batchSize);
           toAdd.forEach((index) => newQueue.add(index));
 
-          // 如果还有剩余，继续下一批
+          // 如果还有剩余，继续下一批（增加间隔时间以减轻渲染压力）
           if (stillNotInQueue.length > batchSize) {
-            setTimeout(processBatch, 300);
+            setTimeout(processBatch, 800);
           } else {
             isBatchProcessing.current = false;
           }
@@ -316,25 +315,41 @@ export const ChatPage = () => {
       );
       setResults(placeholders);
 
-      // 批量更新函数
+      // BroadcastChannel 用于跨标签页通信
+      const broadcastChannel = new BroadcastChannel('rwkv-detail-channel');
+
+      // 批量更新函数 - 使用 requestAnimationFrame 确保在渲染帧之间更新
       const flushUpdates = () => {
         if (updateBuffer.current.size > 0) {
           const updates = new Map(updateBuffer.current);
           updateBuffer.current.clear();
 
-          setResults((prev) =>
-            prev.map((result, i) => {
-              const update = updates.get(i);
-              return update
-                ? {
-                    ...result,
-                    content: update.content,
-                    htmlCode: update.htmlCode,
-                    isLoading: false,
-                  }
-                : result;
-            }),
-          );
+          // 广播更新到所有打开的 DetailPage
+          updates.forEach((update, index) => {
+            broadcastChannel.postMessage({
+              type: 'UPDATE_CONTENT',
+              index,
+              htmlCode: update.htmlCode,
+              content: update.content,
+            });
+          });
+
+          // 使用 requestAnimationFrame 在下一帧更新，避免阻塞当前帧
+          requestAnimationFrame(() => {
+            setResults((prev) =>
+              prev.map((result, i) => {
+                const update = updates.get(i);
+                return update
+                  ? {
+                      ...result,
+                      content: update.content,
+                      htmlCode: update.htmlCode,
+                      isLoading: false,
+                    }
+                  : result;
+              }),
+            );
+          });
         }
       };
 
@@ -355,13 +370,13 @@ export const ChatPage = () => {
               });
             }
 
-            // 使用节流：每 150ms 批量更新一次
+            // 使用节流：每 500ms 批量更新一次（减少渲染频率）
             if (updateTimeoutRef.current) {
               clearTimeout(updateTimeoutRef.current);
             }
             updateTimeoutRef.current = setTimeout(() => {
               flushUpdates();
-            }, 150);
+            }, 500);
           },
           newAbortController,
         );
@@ -371,6 +386,10 @@ export const ChatPage = () => {
           clearTimeout(updateTimeoutRef.current);
         }
         flushUpdates();
+        
+        // 广播生成完成
+        broadcastChannel.postMessage({ type: 'GENERATION_COMPLETE' });
+        broadcastChannel.close();
       } catch (error: unknown) {
         // 检查是否是用户主动取消
         if (error instanceof Error && error.name === 'AbortError') {
@@ -382,6 +401,8 @@ export const ChatPage = () => {
         setResults((prev) =>
           prev.map((result) => ({ ...result, isLoading: false })),
         );
+        // 关闭 BroadcastChannel
+        broadcastChannel.close();
       } finally {
         // 只有当前 AbortController 没有被新的请求替换时才设置为 false
         if (globalState.abortController === newAbortController) {
@@ -402,40 +423,62 @@ export const ChatPage = () => {
         const latestUpdate = updateBuffer.current.get(index);
         const htmlCodeToUse = latestUpdate?.htmlCode || results[index].htmlCode;
 
-        // 如果缓冲区有数据，刷新所有缓冲的更新并保存
-        if (updateBuffer.current.size > 0) {
-          const updates = new Map(updateBuffer.current);
-          const updatedResults = results.map((result, i) => {
-            const update = updates.get(i);
-            return update
-              ? {
-                  ...result,
-                  content: update.content,
-                  htmlCode: update.htmlCode,
-                  isLoading: false,
-                }
-              : result;
-          });
-          sessionStorage.setItem(
-            'chatPageResults',
-            JSON.stringify(updatedResults),
-          );
-        } else {
-          sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+        // 构建新标签页的 URL，使用查询参数传递 index
+        const detailUrl = `/detail?index=${index}`;
+        
+        // 在新标签页中打开
+        const newWindow = window.open(detailUrl, `detail-${index}`, 'noopener,noreferrer');
+        
+        if (newWindow) {
+          // 等待新窗口加载完成后，通过 BroadcastChannel 发送数据
+          const channel = new BroadcastChannel('rwkv-detail-channel');
+          
+          // 延迟发送，确保新窗口已经监听
+          setTimeout(() => {
+            channel.postMessage({
+              type: 'INIT_DETAIL',
+              index: index,
+              htmlCode: htmlCodeToUse,
+              content: latestUpdate?.content || results[index].content,
+            });
+            channel.close();
+          }, 100);
         }
 
-        sessionStorage.setItem('chatPagePrompt', prompt);
-        sessionStorage.setItem('chatPageIsGenerating', String(isGenerating));
+        // 在空闲时保存状态
+        const saveState = () => {
+          if (updateBuffer.current.size > 0) {
+            const updates = new Map(updateBuffer.current);
+            const updatedResults = results.map((result, i) => {
+              const update = updates.get(i);
+              return update
+                ? {
+                    ...result,
+                    content: update.content,
+                    htmlCode: update.htmlCode,
+                    isLoading: false,
+                  }
+                : result;
+            });
+            sessionStorage.setItem(
+              'chatPageResults',
+              JSON.stringify(updatedResults),
+            );
+          } else {
+            sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+          }
+          sessionStorage.setItem('chatPagePrompt', prompt);
+          sessionStorage.setItem('chatPageIsGenerating', String(isGenerating));
+        };
 
-        navigate('/detail', {
-          state: {
-            htmlCode: htmlCodeToUse,
-            index: index,
-          },
-        });
+        if ('requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(saveState, { timeout: 100 });
+        } else {
+          setTimeout(saveState, 0);
+        }
       }
     },
-    [results, prompt, navigate, isGenerating],
+    [results, prompt, isGenerating],
   );
 
   const handlePromptChange = useCallback(

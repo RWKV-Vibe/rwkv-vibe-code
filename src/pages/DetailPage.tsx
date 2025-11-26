@@ -25,30 +25,70 @@ export const DetailPage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  // 从路由状态中获取传递的数据
-  const initialHtmlCode =
-    (location.state as { htmlCode?: string; index?: number })?.htmlCode ||
-    DEFAULT_HTML;
-  const resultIndex = (location.state as { htmlCode?: string; index?: number })
-    ?.index;
+  // 从 URL 查询参数获取 index
+  const searchParams = new URLSearchParams(location.search);
+  const resultIndex = searchParams.get('index') ? parseInt(searchParams.get('index')!) : undefined;
+
+  // 从路由状态或默认值获取初始数据
+  const [initialHtmlCode, setInitialHtmlCode] = useState(
+    (location.state as { htmlCode?: string })?.htmlCode || DEFAULT_HTML
+  );
 
   const [htmlCode, setHtmlCode] = useState(initialHtmlCode);
   const [copied, setCopied] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [hasUserEdited, setHasUserEdited] = useState(false);
+  const [isLiveUpdating, setIsLiveUpdating] = useState(false);
 
+  // 监听 BroadcastChannel 接收初始数据和实时更新
   useEffect(() => {
-    if (initialHtmlCode) {
-      setHtmlCode(initialHtmlCode);
-    }
-  }, [initialHtmlCode]);
+    const channel = new BroadcastChannel('rwkv-detail-channel');
+    
+    channel.onmessage = (event) => {
+      const { type, index, htmlCode: newHtmlCode } = event.data;
+      
+      // 只处理与当前 index 匹配的消息
+      if (index !== resultIndex) return;
+      
+      if (type === 'INIT_DETAIL' && newHtmlCode) {
+        setInitialHtmlCode(newHtmlCode);
+        if (!hasUserEdited) {
+          setHtmlCode(newHtmlCode);
+        }
+      } else if (type === 'UPDATE_CONTENT' && newHtmlCode && !hasUserEdited) {
+        setHtmlCode(newHtmlCode);
+        setIsLiveUpdating(true);
+      } else if (type === 'GENERATION_COMPLETE') {
+        setIsLiveUpdating(false);
+      }
+    };
+
+    return () => channel.close();
+  }, [resultIndex, hasUserEdited]);
+
+
+  // 监听用户编辑
+  const handleEditorChange = (value: string | undefined) => {
+    setHtmlCode(value || '');
+    setHasUserEdited(true); // 标记用户已编辑
+  };
 
   const handleBack = () => {
     if (isNavigating) return; // 防止重复点击
     setIsNavigating(true);
-    // 使用 setTimeout 确保状态更新后再导航
-    setTimeout(() => {
-      navigate(-1);
-    }, 0);
+    // 使用 requestIdleCallback 或 setTimeout 确保在浏览器空闲时导航
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(
+        () => {
+          navigate(-1);
+        },
+        { timeout: 100 },
+      );
+    } else {
+      setTimeout(() => {
+        navigate(-1);
+      }, 16); // 约一帧的时间
+    }
   };
 
   const handleCopy = async () => {
@@ -85,13 +125,28 @@ export const DetailPage = () => {
           >
             <ArrowLeft className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14" />
             <span className="hidden sm:inline">
-              {isNavigating ? t('detailpage.navigating') || '返回中...' : t('detailpage.back')}
+              {isNavigating
+                ? t('detailpage.navigating') || '返回中...'
+                : t('detailpage.back')}
             </span>
           </button>
           {resultIndex !== undefined && (
-            <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-600 dark:text-gray-400">
-              {t('detailpage.solution', { number: resultIndex + 1 })}
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-600 dark:text-gray-400">
+                {t('detailpage.solution', { number: resultIndex + 1 })}
+              </span>
+              {isLiveUpdating && !hasUserEdited && (
+                <span className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900 rounded-full text-sm font-semibold text-blue-600 dark:text-blue-300 animate-pulse">
+                  <span className="w-2 h-2 bg-blue-600 dark:bg-blue-300 rounded-full"></span>
+                  <span>{t('detailpage.liveUpdating') || '实时更新中'}</span>
+                </span>
+              )}
+              {hasUserEdited && (
+                <span className="flex items-center gap-2 px-4 py-2 bg-orange-100 dark:bg-orange-900 rounded-full text-sm font-semibold text-orange-600 dark:text-orange-300">
+                  <span>{t('detailpage.editMode') || '编辑模式'}</span>
+                </span>
+              )}
+            </div>
           )}
         </div>
 
@@ -132,7 +187,7 @@ export const DetailPage = () => {
                 height="100%"
                 defaultLanguage="html"
                 value={htmlCode}
-                onChange={(value) => setHtmlCode(value || '')}
+                onChange={handleEditorChange}
                 theme="vs-dark"
                 options={{
                   minimap: { enabled: false },
