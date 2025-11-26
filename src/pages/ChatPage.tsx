@@ -51,11 +51,63 @@ export const ChatPage = () => {
   });
   const totalCount = 24;
 
-  // 用于批量更新的缓冲区
+  // 计算已完成的任务数（使用 Set 追踪已完成的索引）
+  const [completedIndexes, setCompletedIndexes] = useState<Set<number>>(() => {
+    // 初始化时从 sessionStorage 恢复的结果中计算已完成的索引
+    const saved = sessionStorage.getItem('chatPageResults');
+    if (saved) {
+      const savedResults = JSON.parse(saved);
+      const completed = new Set<number>();
+      savedResults.forEach((result: GeneratedResult, index: number) => {
+        if (
+          !result.isLoading &&
+          result.htmlCode &&
+          result.htmlCode !== DEFAULT_HTML
+        ) {
+          completed.add(index);
+        }
+      });
+      return completed;
+    }
+    return new Set();
+  });
+  const completedTaskCount = completedIndexes.size;
+
+  // 标记是否是第一次渲染（页面会话的第一次生成）
+  const hasRenderedOnce = useRef(false);
+
+  const batchSize = 8; // 后续每批渲染 8 个 iframe
+  const isBatchProcessing = useRef(false); // 标记是否正在批处理中
+  const resultsRef = useRef(results); // 存储最新的 results 引用
+
+  // 使用全局存储来保持生成状态，避免组件卸载时中断
+  const globalState = useMemo(() => {
+    if (!(window as any).__chatPageGlobalState) {
+      (window as any).__chatPageGlobalState = {
+        abortController: null,
+        updateBuffer: new Map(),
+        isGenerating: false,
+      };
+    }
+    return (window as any).__chatPageGlobalState;
+  }, []);
+
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 用于批量更新的缓冲区 - 使用全局存储以避免组件卸载时丢失
   const updateBuffer = useRef<
     Map<number, { content: string; htmlCode: string }>
-  >(new Map());
+  >(globalState.updateBuffer);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 组件挂载时恢复全局状态
+  useEffect(() => {
+    abortControllerRef.current = globalState.abortController;
+    if (globalState.isGenerating && !isGenerating) {
+      setIsGenerating(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // iframe 渲染队列控制
   const [iframeRenderQueue, setIframeRenderQueue] = useState<Set<number>>(
@@ -77,30 +129,27 @@ export const ChatPage = () => {
     },
   );
 
-  // 标记是否是第一次渲染（页面会话的第一次生成）
-  const hasRenderedOnce = useRef(false);
-
-  const batchSize = 8; // 后续每批渲染 8 个 iframe
-  const isBatchProcessing = useRef(false); // 标记是否正在批处理中
-  const resultsRef = useRef(results); // 存储最新的 results 引用
-  const abortControllerRef = useRef<AbortController | null>(null); // 用于取消正在进行的请求
-
   // 更新 resultsRef
   useEffect(() => {
     resultsRef.current = results;
   }, [results]);
 
-  // 组件卸载时清理资源
+  // 组件卸载时清理资源（但不中断生成）
   useEffect(() => {
     return () => {
+      // 清理定时器
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+
+      // 保存状态到全局，以便页面切换后恢复
+      globalState.abortController = abortControllerRef.current;
+      globalState.updateBuffer = updateBuffer.current;
+      globalState.isGenerating = isGenerating;
+
+      // 不要中断 AbortController，让生成继续在后台进行
     };
-  }, []);
+  });
 
   // 存储每个 Markdown 容器的引用
   const markdownContainerRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -230,17 +279,19 @@ export const ChatPage = () => {
   const handleGenerate = useCallback(
     async (userPrompt: string) => {
       // 取消之前正在进行的请求
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+      if (globalState.abortController) {
+        globalState.abortController.abort();
         console.log('已取消之前的生成请求');
       }
 
       // 创建新的 AbortController
       const newAbortController = new AbortController();
       abortControllerRef.current = newAbortController;
+      globalState.abortController = newAbortController;
 
       setPrompt(userPrompt);
       setIsGenerating(true);
+      globalState.isGenerating = true;
 
       // 清除旧的结果和标记
       sessionStorage.removeItem('chatPageResults');
@@ -249,6 +300,9 @@ export const ChatPage = () => {
       // 清空 iframe 渲染队列，重置批处理标记
       setIframeRenderQueue(new Set());
       isBatchProcessing.current = false;
+
+      // 清空已完成索引集合
+      setCompletedIndexes(new Set());
 
       // 初始化 24 个占位符
       const placeholders: GeneratedResult[] = Array.from(
@@ -261,9 +315,6 @@ export const ChatPage = () => {
         }),
       );
       setResults(placeholders);
-
-      // 追踪哪些index已经开始接收数据（用于计数）
-      const startedIndexes = new Set<number>();
 
       // 批量更新函数
       const flushUpdates = () => {
@@ -291,13 +342,17 @@ export const ChatPage = () => {
         await AIService.generateMultipleResponses(
           userPrompt,
           totalCount,
-          (index, content, htmlCode) => {
+          (index, content, htmlCode, isComplete = false) => {
             // 将更新添加到缓冲区
             updateBuffer.current.set(index, { content, htmlCode });
 
-            // 标记该index已开始接收数据
-            if (!startedIndexes.has(index)) {
-              startedIndexes.add(index);
+            // 只有当该 index 的流式响应完全完成时，才标记为完成
+            if (isComplete) {
+              setCompletedIndexes((prev) => {
+                const newSet = new Set(prev);
+                newSet.add(index);
+                return newSet;
+              });
             }
 
             // 使用节流：每 150ms 批量更新一次
@@ -329,13 +384,15 @@ export const ChatPage = () => {
         );
       } finally {
         // 只有当前 AbortController 没有被新的请求替换时才设置为 false
-        if (abortControllerRef.current === newAbortController) {
+        if (globalState.abortController === newAbortController) {
           setIsGenerating(false);
+          globalState.isGenerating = false;
           abortControllerRef.current = null;
+          globalState.abortController = null;
         }
       }
     },
-    [totalCount],
+    [totalCount, globalState],
   );
 
   const handleOpenDetail = useCallback(
@@ -409,16 +466,11 @@ export const ChatPage = () => {
     setPrompt(optimizedPrompt);
   }, []);
 
-  // 计算已完成的任务数
-  const completedTaskCount = useMemo(() => {
-    return results.filter((result) => !result.isLoading && result.htmlCode)
-      .length;
-  }, [results]);
-
   // 终止生成
   const handleStopGenerate = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    if (globalState.abortController) {
+      globalState.abortController.abort();
+      globalState.abortController = null;
       abortControllerRef.current = null;
     }
 
@@ -432,6 +484,7 @@ export const ChatPage = () => {
     if (updateBuffer.current.size > 0) {
       const updates = new Map(updateBuffer.current);
       updateBuffer.current.clear();
+      globalState.updateBuffer.clear();
 
       setResults((prev) =>
         prev.map((result, i) => {
@@ -454,7 +507,8 @@ export const ChatPage = () => {
     }
 
     setIsGenerating(false);
-  }, []);
+    globalState.isGenerating = false;
+  }, [globalState]);
 
   return (
     <div className="flex flex-col h-screen bg-background dark:bg-[#1e1e1e]">

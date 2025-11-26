@@ -167,7 +167,12 @@ export class AIService {
   static async generateMultipleResponses(
     userMessage: string,
     count: number = 24,
-    onProgress?: (index: number, content: string, htmlCode: string) => void,
+    onProgress?: (
+      index: number,
+      content: string,
+      htmlCode: string,
+      isComplete?: boolean,
+    ) => void,
     abortController?: AbortController,
   ): Promise<Array<{ content: string; htmlCode: string }>> {
     const controller = abortController || new AbortController();
@@ -268,7 +273,7 @@ export class AIService {
                     console.log(
                       `Rendering index ${index}, content length: ${contentBuffers[index].length}, HTML length: ${htmlCode.length}`,
                     );
-                    onProgress(index, contentBuffers[index], htmlCode);
+                    onProgress(index, contentBuffers[index], htmlCode, false);
                     // 更新上次渲染的长度
                     lastRenderedLength.set(index, contentBuffers[index].length);
                   }
@@ -281,19 +286,15 @@ export class AIService {
         }
       }
 
-      // 构建最终结果，并确保最后一次触发渲染
+      // 构建最终结果，并确保最后一次触发渲染（标记为完成）
       for (let i = 0; i < count; i++) {
         const content = contentBuffers[i] || '';
         const htmlCode = this.extractHTMLCode(content);
         results.push({ content, htmlCode });
 
-        // 最后一次调用onProgress，确保显示完整内容
+        // 最后一次调用onProgress，标记该 index 已完成
         if (onProgress && content.length > 0) {
-          const lastLength = lastRenderedLength.get(i) || 0;
-          // 如果内容有更新但还没渲染，触发最后一次渲染
-          if (content.length > lastLength) {
-            onProgress(i, content, htmlCode);
-          }
+          onProgress(i, content, htmlCode, true); // isComplete = true
         }
       }
 
