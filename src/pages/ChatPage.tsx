@@ -501,6 +501,29 @@ export const ChatPage = () => {
     setPrompt(optimizedPrompt);
   }, []);
 
+  // 预设 Prompt 建议
+  const suggestions = useMemo(
+    () => [
+      t('homepage.suggestions.hotel'),
+      t('homepage.suggestions.museum'),
+      t('homepage.suggestions.portfolio'),
+      t('homepage.suggestions.cafe'),
+      t('homepage.suggestions.saas'),
+      t('homepage.suggestions.realEstate'),
+      t('homepage.suggestions.corporate'),
+      t('homepage.suggestions.gallery'),
+    ],
+    [t],
+  );
+
+  const handleSuggestionClick = useCallback(
+    (suggestion: string) => {
+      setPrompt(suggestion);
+      handleGenerate(suggestion);
+    },
+    [handleGenerate],
+  );
+
   // 终止生成
   const handleStopGenerate = useCallback(() => {
     if (globalState.abortController) {
@@ -629,83 +652,107 @@ export const ChatPage = () => {
         </div>
       </div>
 
-      {/* 中间：网页预览网格 */}
+      {/* 中间：网页预览网格或预设建议 */}
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-[#1a1a1a]">
-        <div
-          className="grid grid-cols-12 gap-4 mx-auto"
-          style={{ maxWidth: '12000px' }}
-        >
-          {results.map((result, index) => (
-            <div
-              key={result.id}
-              className={`group flex flex-col rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-600 transition-all ${
-                result.isLoading
-                  ? 'cursor-not-allowed opacity-70'
-                  : 'hover:border-blue-400 hover:shadow-xl cursor-pointer'
-              }`}
-              onClick={() => handleOpenDetail(index)}
-            >
-              {result.isLoading ? (
-                <div className="w-full h-[1760px] bg-white dark:bg-[#2d2d2d] flex items-center justify-center">
-                  <div className="text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('chatpage.generating') || '生成中...'}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* 上部分：预览效果 */}
-                  <div className="relative h-[1700px] bg-white border-b-2 border-gray-300 dark:border-gray-600 overflow-auto will-change-contents">
-                    {iframeRenderQueue.has(index) ? (
-                      <iframe
-                        key={`iframe-${result.id}`}
-                        srcDoc={result.htmlCode || DEFAULT_HTML}
-                        className="w-full border-0 bg-white block pointer-events-none"
-                        title={`Preview ${index + 1}`}
-                        sandbox="allow-scripts"
-                        scrolling="no"
-                        loading="lazy"
-                        style={{
-                          height: '200vh',
-                          contentVisibility: 'auto',
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-[#2d2d2d]">
-                        <div className="text-center">
-                          <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-2" />
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {t('chatpage.preparingRender')}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 下部分：Markdown 渲染内容 */}
-                  <div
-                    ref={(el) => {
-                      if (el) {
-                        markdownContainerRefs.current.set(index, el);
-                      }
-                    }}
-                    className="h-[260px] bg-white dark:bg-[#1e1e1e] relative overflow-auto will-change-scroll"
-                    style={{
-                      scrollBehavior: 'smooth',
-                      isolation: 'isolate',
-                    }}
-                  >
-                    <div className="p-4">
-                      <MarkdownRenderer content={result.content} />
+        {results.length === 0 ? (
+          /* 预设 Prompt 建议 */
+          <div className="max-w-[1400px] mx-auto flex flex-col items-center justify-center h-full gap-8">
+            <h2 className="text-4xl font-bold text-gray-700 dark:text-gray-300">
+              {t('chatpage.selectPrompt') || '选择一个预设模板开始'}
+            </h2>
+            <div className="w-full grid grid-cols-2 gap-6">
+              {suggestions.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="w-full px-8 py-6 rounded-xl text-2xl font-semibold
+                             bg-white dark:bg-[#2d3135] hover:bg-gray-50 dark:hover:bg-[#3b4045]
+                             text-gray-700 dark:text-white transition-all duration-200
+                             border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500
+                             shadow-lg hover:shadow-xl hover:scale-[1.02] transform"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div
+            className="grid grid-cols-12 gap-4 mx-auto"
+            style={{ maxWidth: '12000px' }}
+          >
+            {results.map((result, index) => (
+              <div
+                key={result.id}
+                className={`group flex flex-col rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-600 transition-all ${
+                  result.isLoading
+                    ? 'cursor-not-allowed opacity-70'
+                    : 'hover:border-blue-400 hover:shadow-xl cursor-pointer'
+                }`}
+                onClick={() => handleOpenDetail(index)}
+              >
+                {result.isLoading ? (
+                  <div className="w-full h-[1760px] bg-white dark:bg-[#2d2d2d] flex items-center justify-center">
+                    <div className="text-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {t('chatpage.generating') || '生成中...'}
+                      </p>
                     </div>
                   </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
+                ) : (
+                  <>
+                    {/* 上部分：预览效果 */}
+                    <div className="relative h-[1700px] bg-white border-b-2 border-gray-300 dark:border-gray-600 overflow-auto will-change-contents">
+                      {iframeRenderQueue.has(index) ? (
+                        <iframe
+                          key={`iframe-${result.id}`}
+                          srcDoc={result.htmlCode || DEFAULT_HTML}
+                          className="w-full border-0 bg-white block pointer-events-none"
+                          title={`Preview ${index + 1}`}
+                          sandbox="allow-scripts"
+                          scrolling="no"
+                          loading="lazy"
+                          style={{
+                            height: '200vh',
+                            contentVisibility: 'auto',
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-[#2d2d2d]">
+                          <div className="text-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {t('chatpage.preparingRender')}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 下部分：Markdown 渲染内容 */}
+                    <div
+                      ref={(el) => {
+                        if (el) {
+                          markdownContainerRefs.current.set(index, el);
+                        }
+                      }}
+                      className="h-[260px] bg-white dark:bg-[#1e1e1e] relative overflow-auto will-change-scroll"
+                      style={{
+                        scrollBehavior: 'smooth',
+                        isolation: 'isolate',
+                      }}
+                    >
+                      <div className="p-4">
+                        <MarkdownRenderer content={result.content} />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

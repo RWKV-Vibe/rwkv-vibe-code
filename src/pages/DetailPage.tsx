@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
-import { ArrowLeft, Eye, Code2, Copy, Download } from 'lucide-react';
+import { Eye, Code2, Copy, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const DEFAULT_HTML = `<!DOCTYPE html>
@@ -22,7 +22,6 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 
 export const DetailPage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { t } = useTranslation();
 
   // 从 URL 查询参数获取 index
@@ -49,7 +48,6 @@ export const DetailPage = () => {
 
   const [htmlCode, setHtmlCode] = useState(initialHtmlCode);
   const [copied, setCopied] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
   const [hasUserEdited, setHasUserEdited] = useState(false);
   const [isLiveUpdating, setIsLiveUpdating] = useState(false);
 
@@ -99,24 +97,6 @@ export const DetailPage = () => {
     setHasUserEdited(true); // 标记用户已编辑
   };
 
-  const handleBack = () => {
-    if (isNavigating) return; // 防止重复点击
-    setIsNavigating(true);
-    // 使用 requestIdleCallback 或 setTimeout 确保在浏览器空闲时导航
-    if ('requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(
-        () => {
-          navigate(-1);
-        },
-        { timeout: 100 },
-      );
-    } else {
-      setTimeout(() => {
-        navigate(-1);
-      }, 16); // 约一帧的时间
-    }
-  };
-
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(htmlCode);
@@ -144,18 +124,6 @@ export const DetailPage = () => {
       {/* 顶部工具栏 - 超大响应式设计 */}
       <div className="h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36 border-b-2 border-border dark:border-gray-700 bg-white dark:bg-[#252525] flex items-center justify-between px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20">
         <div className="flex items-center gap-4 sm:gap-6 md:gap-8 lg:gap-12">
-          <button
-            onClick={handleBack}
-            disabled={isNavigating}
-            className="flex items-center gap-3 md:gap-4 px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 lg:px-12 lg:py-6 xl:px-14 xl:py-7 rounded-2xl text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ArrowLeft className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14" />
-            <span className="hidden sm:inline">
-              {isNavigating
-                ? t('detailpage.navigating') || '返回中...'
-                : t('detailpage.back')}
-            </span>
-          </button>
           {resultIndex !== undefined && (
             <div className="flex items-center gap-4">
               <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-600 dark:text-gray-400">
