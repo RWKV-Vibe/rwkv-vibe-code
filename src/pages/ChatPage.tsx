@@ -386,7 +386,7 @@ export const ChatPage = () => {
           clearTimeout(updateTimeoutRef.current);
         }
         flushUpdates();
-        
+
         // 广播生成完成
         broadcastChannel.postMessage({ type: 'GENERATION_COMPLETE' });
         broadcastChannel.close();
@@ -425,14 +425,18 @@ export const ChatPage = () => {
 
         // 构建新标签页的 URL，使用查询参数传递 index
         const detailUrl = `/detail?index=${index}`;
-        
+
         // 在新标签页中打开
-        const newWindow = window.open(detailUrl, `detail-${index}`, 'noopener,noreferrer');
-        
+        const newWindow = window.open(
+          detailUrl,
+          `detail-${index}`,
+          'noopener,noreferrer',
+        );
+
         if (newWindow) {
           // 等待新窗口加载完成后，通过 BroadcastChannel 发送数据
           const channel = new BroadcastChannel('rwkv-detail-channel');
-          
+
           // 延迟发送，确保新窗口已经监听
           setTimeout(() => {
             channel.postMessage({
