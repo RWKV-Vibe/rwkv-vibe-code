@@ -322,6 +322,7 @@ export class AIService {
           top_k: 1,
           top_p: 0.5,
           stream: true,
+          enable_think: false,
         }),
         signal: controller.signal,
       });
