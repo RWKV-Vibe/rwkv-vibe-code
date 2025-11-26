@@ -34,12 +34,22 @@ export const DetailPage = () => {
 
   const [htmlCode, setHtmlCode] = useState(initialHtmlCode);
   const [copied, setCopied] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
     if (initialHtmlCode) {
       setHtmlCode(initialHtmlCode);
     }
   }, [initialHtmlCode]);
+
+  const handleBack = () => {
+    if (isNavigating) return; // 防止重复点击
+    setIsNavigating(true);
+    // 使用 setTimeout 确保状态更新后再导航
+    setTimeout(() => {
+      navigate(-1);
+    }, 0);
+  };
 
   const handleCopy = async () => {
     try {
@@ -69,11 +79,14 @@ export const DetailPage = () => {
       <div className="h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36 border-b-2 border-border dark:border-gray-700 bg-white dark:bg-[#252525] flex items-center justify-between px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20">
         <div className="flex items-center gap-4 sm:gap-6 md:gap-8 lg:gap-12">
           <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-3 md:gap-4 px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 lg:px-12 lg:py-6 xl:px-14 xl:py-7 rounded-2xl text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-[1.02] shadow-lg"
+            onClick={handleBack}
+            disabled={isNavigating}
+            className="flex items-center gap-3 md:gap-4 px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 lg:px-12 lg:py-6 xl:px-14 xl:py-7 rounded-2xl text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ArrowLeft className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14" />
-            <span className="hidden sm:inline">{t('detailpage.back')}</span>
+            <span className="hidden sm:inline">
+              {isNavigating ? t('detailpage.navigating') || '返回中...' : t('detailpage.back')}
+            </span>
           </button>
           {resultIndex !== undefined && (
             <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-600 dark:text-gray-400">
@@ -122,22 +135,22 @@ export const DetailPage = () => {
                 onChange={(value) => setHtmlCode(value || '')}
                 theme="vs-dark"
                 options={{
-                  minimap: { enabled: true },
-                  fontSize: 32,
-                  lineHeight: 48,
-                  fontWeight: '600',
+                  minimap: { enabled: false },
+                  fontSize: 14,
+                  lineHeight: 20,
+                  fontWeight: '400',
                   lineNumbers: 'on',
-                  lineNumbersMinChars: 5,
+                  lineNumbersMinChars: 3,
                   scrollBeyondLastLine: false,
                   automaticLayout: true,
                   tabSize: 2,
                   wordWrap: 'on',
-                  formatOnPaste: true,
-                  formatOnType: true,
-                  padding: { top: 24, bottom: 24 },
+                  formatOnPaste: false,
+                  formatOnType: false,
+                  padding: { top: 16, bottom: 16 },
                   scrollbar: {
-                    verticalScrollbarSize: 20,
-                    horizontalScrollbarSize: 20,
+                    verticalScrollbarSize: 12,
+                    horizontalScrollbarSize: 12,
                   },
                 }}
               />

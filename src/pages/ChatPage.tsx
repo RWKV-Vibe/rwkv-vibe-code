@@ -51,6 +51,12 @@ export const ChatPage = () => {
   });
   const totalCount = 24;
 
+  // 用于批量更新的缓冲区
+  const updateBuffer = useRef<
+    Map<number, { content: string; htmlCode: string }>
+  >(new Map());
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // iframe 渲染队列控制
   const [iframeRenderQueue, setIframeRenderQueue] = useState<Set<number>>(
     () => {
@@ -83,6 +89,18 @@ export const ChatPage = () => {
   useEffect(() => {
     resultsRef.current = results;
   }, [results]);
+
+  // 组件卸载时清理资源
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // 存储每个 Markdown 容器的引用
   const markdownContainerRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -247,32 +265,57 @@ export const ChatPage = () => {
       // 追踪哪些index已经开始接收数据（用于计数）
       const startedIndexes = new Set<number>();
 
+      // 批量更新函数
+      const flushUpdates = () => {
+        if (updateBuffer.current.size > 0) {
+          const updates = new Map(updateBuffer.current);
+          updateBuffer.current.clear();
+
+          setResults((prev) =>
+            prev.map((result, i) => {
+              const update = updates.get(i);
+              return update
+                ? {
+                    ...result,
+                    content: update.content,
+                    htmlCode: update.htmlCode,
+                    isLoading: false,
+                  }
+                : result;
+            }),
+          );
+        }
+      };
+
       try {
         await AIService.generateMultipleResponses(
           userPrompt,
           totalCount,
           (index, content, htmlCode) => {
-            // 实时更新每个结果
-            setResults((prev) =>
-              prev.map((result, i) =>
-                i === index
-                  ? {
-                      ...result,
-                      content,
-                      htmlCode,
-                      isLoading: false,
-                    }
-                  : result,
-              ),
-            );
+            // 将更新添加到缓冲区
+            updateBuffer.current.set(index, { content, htmlCode });
 
             // 标记该index已开始接收数据
             if (!startedIndexes.has(index)) {
               startedIndexes.add(index);
             }
+
+            // 使用节流：每 150ms 批量更新一次
+            if (updateTimeoutRef.current) {
+              clearTimeout(updateTimeoutRef.current);
+            }
+            updateTimeoutRef.current = setTimeout(() => {
+              flushUpdates();
+            }, 150);
           },
           newAbortController,
         );
+
+        // 确保所有剩余更新都被应用
+        if (updateTimeoutRef.current) {
+          clearTimeout(updateTimeoutRef.current);
+        }
+        flushUpdates();
       } catch (error: unknown) {
         // 检查是否是用户主动取消
         if (error instanceof Error && error.name === 'AbortError') {
@@ -298,19 +341,44 @@ export const ChatPage = () => {
   const handleOpenDetail = useCallback(
     (index: number) => {
       if (results[index] && !results[index].isLoading) {
-        // 保存当前状态到 sessionStorage，确保返回时不会丢失
-        sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+        // 获取最新的 htmlCode（优先从 buffer 中获取）
+        const latestUpdate = updateBuffer.current.get(index);
+        const htmlCodeToUse = latestUpdate?.htmlCode || results[index].htmlCode;
+
+        // 如果缓冲区有数据，刷新所有缓冲的更新并保存
+        if (updateBuffer.current.size > 0) {
+          const updates = new Map(updateBuffer.current);
+          const updatedResults = results.map((result, i) => {
+            const update = updates.get(i);
+            return update
+              ? {
+                  ...result,
+                  content: update.content,
+                  htmlCode: update.htmlCode,
+                  isLoading: false,
+                }
+              : result;
+          });
+          sessionStorage.setItem(
+            'chatPageResults',
+            JSON.stringify(updatedResults),
+          );
+        } else {
+          sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+        }
+
         sessionStorage.setItem('chatPagePrompt', prompt);
+        sessionStorage.setItem('chatPageIsGenerating', String(isGenerating));
 
         navigate('/detail', {
           state: {
-            htmlCode: results[index].htmlCode,
+            htmlCode: htmlCodeToUse,
             index: index,
           },
         });
       }
     },
-    [results, prompt, navigate],
+    [results, prompt, navigate, isGenerating],
   );
 
   const handlePromptChange = useCallback(
@@ -341,14 +409,10 @@ export const ChatPage = () => {
     setPrompt(optimizedPrompt);
   }, []);
 
-  // 计算正在运行的任务数
-  const runningTaskCount = useMemo(() => {
-    return results.filter((result) => result.isLoading).length;
-  }, [results]);
-
   // 计算已完成的任务数
   const completedTaskCount = useMemo(() => {
-    return results.filter((result) => !result.isLoading && result.htmlCode).length;
+    return results.filter((result) => !result.isLoading && result.htmlCode)
+      .length;
   }, [results]);
 
   // 终止生成
@@ -357,11 +421,39 @@ export const ChatPage = () => {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+
+    // 清理更新定时器
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+      updateTimeoutRef.current = null;
+    }
+
+    // 立即应用所有待处理的更新
+    if (updateBuffer.current.size > 0) {
+      const updates = new Map(updateBuffer.current);
+      updateBuffer.current.clear();
+
+      setResults((prev) =>
+        prev.map((result, i) => {
+          const update = updates.get(i);
+          return update
+            ? {
+                ...result,
+                content: update.content,
+                htmlCode: update.htmlCode,
+                isLoading: false,
+              }
+            : { ...result, isLoading: false };
+        }),
+      );
+    } else {
+      // 将所有仍在加载的结果标记为加载完成
+      setResults((prev) =>
+        prev.map((result) => ({ ...result, isLoading: false })),
+      );
+    }
+
     setIsGenerating(false);
-    // 将所有仍在加载的结果标记为加载完成
-    setResults((prev) =>
-      prev.map((result) => ({ ...result, isLoading: false })),
-    );
   }, []);
 
   return (
@@ -457,12 +549,21 @@ export const ChatPage = () => {
           {results.map((result, index) => (
             <div
               key={result.id}
-              className="group flex flex-col rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-600 hover:border-blue-400 transition-all hover:shadow-xl cursor-pointer"
+              className={`group flex flex-col rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-600 transition-all ${
+                result.isLoading
+                  ? 'cursor-not-allowed opacity-70'
+                  : 'hover:border-blue-400 hover:shadow-xl cursor-pointer'
+              }`}
               onClick={() => handleOpenDetail(index)}
             >
               {result.isLoading ? (
                 <div className="w-full h-[1760px] bg-white dark:bg-[#2d2d2d] flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                  <div className="text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {t('chatpage.generating') || '生成中...'}
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <>
