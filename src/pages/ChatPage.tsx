@@ -367,6 +367,8 @@ export const ChatPage = () => {
           const updates = new Map(updateBuffer.current);
           // 不清空 updateBuffer，保留数据供 DetailPage 使用
 
+          console.log(`flushUpdates: 准备更新 ${updates.size} 个结果`);
+
           // 广播更新到所有打开的 DetailPage
           updates.forEach((update, index) => {
             try {
@@ -400,8 +402,14 @@ export const ChatPage = () => {
               'chatPageResults',
               JSON.stringify(newResults),
             );
+            console.log(
+              `flushUpdates: 已保存到 sessionStorage，总数: ${newResults.length}`,
+            );
+
             return newResults;
           });
+        } else {
+          console.log('flushUpdates: updateBuffer 为空，跳过更新');
         }
       };
 
@@ -443,35 +451,50 @@ export const ChatPage = () => {
         if (sessionStorageUpdateTimeoutRef.current) {
           clearTimeout(sessionStorageUpdateTimeoutRef.current);
         }
-        flushUpdates();
 
-        // 立即最后一次更新 sessionStorage
+        console.log(
+          `生成完成，开始最终数据保存。updateBuffer 大小: ${updateBuffer.current.size}`,
+        );
+
+        flushUpdates();
         updateSessionStorage();
-        // 再次确保所有数据已保存（延迟 100ms）
+
+        // 再次确保所有数据已保存（延迟 200ms 等待状态更新）
         setTimeout(() => {
           try {
-            const savedResults = sessionStorage.getItem('chatPageResults');
-            if (savedResults) {
-              const results = JSON.parse(savedResults);
-              updateBuffer.current.forEach((update, index) => {
-                if (results[index]) {
-                  results[index] = {
-                    ...results[index],
-                    content: update.content,
-                    htmlCode: update.htmlCode,
-                    isLoading: false,
-                  };
-                }
-              });
-              sessionStorage.setItem(
-                'chatPageResults',
-                JSON.stringify(results),
-              );
-            }
+            console.log('执行最终保存...');
+
+            // 构建完整的最终结果
+            const finalResults = resultsRef.current.map((result, i) => {
+              const bufferData =
+                updateBuffer.current.get(i) || globalState.updateBuffer.get(i);
+              if (bufferData) {
+                return {
+                  ...result,
+                  content: bufferData.content,
+                  htmlCode: bufferData.htmlCode,
+                  isLoading: false,
+                };
+              }
+              return result;
+            });
+
+            sessionStorage.setItem(
+              'chatPageResults',
+              JSON.stringify(finalResults),
+            );
+
+            console.log(`✅ 最终保存完成，总数: ${finalResults.length}`);
+            console.log(
+              '前 3 个结果的 HTML 长度:',
+              finalResults
+                .slice(0, 3)
+                .map((r, i) => `#${i}: ${r.htmlCode?.length || 0}`),
+            );
           } catch (error) {
             console.error('最终保存 sessionStorage 失败:', error);
           }
-        }, 100);
+        }, 200);
 
         // 广播生成完成
         broadcastChannel.postMessage({ type: 'GENERATION_COMPLETE' });
@@ -525,69 +548,80 @@ export const ChatPage = () => {
   const handleOpenDetail = useCallback(
     (index: number) => {
       if (results[index] && !results[index].isLoading) {
-        // 获取当前索引的最新数据
-        const bufferUpdate = updateBuffer.current.get(index);
-        const globalUpdate = globalState.updateBuffer.get(index);
+        // 1. 立即构建完整的 results（合并所有 buffer 数据）
+        const completeResults = results.map((result, i) => {
+          const bufferData =
+            updateBuffer.current.get(i) || globalState.updateBuffer.get(i);
+          if (bufferData) {
+            return {
+              ...result,
+              content: bufferData.content,
+              htmlCode: bufferData.htmlCode,
+              isLoading: false,
+            };
+          }
+          return result;
+        });
 
-        // 优先级：updateBuffer > globalState.updateBuffer > results
-        let htmlCodeToUse =
-          bufferUpdate?.htmlCode ||
-          globalUpdate?.htmlCode ||
-          results[index].htmlCode;
-        let contentToUse =
-          bufferUpdate?.content ||
-          globalUpdate?.content ||
-          results[index].content;
-
-        // 先确保 sessionStorage 有最新数据（合并所有 buffer 数据）
+        // 2. 立即保存到 sessionStorage
         try {
-          const currentResults = results.map((result, i) => {
-            const bufferData =
-              updateBuffer.current.get(i) || globalState.updateBuffer.get(i);
-            return bufferData
-              ? {
-                  ...result,
-                  content: bufferData.content,
-                  htmlCode: bufferData.htmlCode,
-                  isLoading: false,
-                }
-              : result;
-          });
           sessionStorage.setItem(
             'chatPageResults',
-            JSON.stringify(currentResults),
+            JSON.stringify(completeResults),
           );
+          console.log(
+            `已保存 chatPageResults 到 sessionStorage, 总数: ${completeResults.length}`,
+          );
+
+          // 验证保存成功
+          const saved = sessionStorage.getItem('chatPageResults');
+          if (!saved) {
+            console.error('验证失败：sessionStorage 保存失败');
+          } else {
+            const parsed = JSON.parse(saved);
+            console.log(
+              `验证成功：已保存 ${parsed.length} 个结果，目标索引 ${index} 的 HTML 长度: ${parsed[index]?.htmlCode?.length || 0}`,
+            );
+          }
         } catch (error) {
           console.error('保存 chatPageResults 失败:', error);
         }
 
-        // 最后验证：如果还是默认值，从 sessionStorage 再读一次
-        if (htmlCodeToUse === DEFAULT_HTML || !htmlCodeToUse) {
-          try {
-            const saved = sessionStorage.getItem('chatPageResults');
-            if (saved) {
-              const parsed = JSON.parse(saved);
-              if (
-                parsed[index]?.htmlCode &&
-                parsed[index].htmlCode !== DEFAULT_HTML
-              ) {
-                htmlCodeToUse = parsed[index].htmlCode;
-                contentToUse = parsed[index].content;
-              }
-            }
-          } catch (error) {
-            console.error('验证时读取 sessionStorage 失败:', error);
-          }
-        }
+        // 3. 获取当前索引的最新数据
+        const bufferUpdate = updateBuffer.current.get(index);
+        const globalUpdate = globalState.updateBuffer.get(index);
+
+        // 优先级：updateBuffer > globalState.updateBuffer > completeResults[index]
+        let htmlCodeToUse =
+          bufferUpdate?.htmlCode ||
+          globalUpdate?.htmlCode ||
+          completeResults[index].htmlCode;
+        let contentToUse =
+          bufferUpdate?.content ||
+          globalUpdate?.content ||
+          completeResults[index].content;
 
         // 验证数据有效性
+        console.log(`准备打开 DetailPage #${index}:`, {
+          htmlCodeLength: htmlCodeToUse?.length || 0,
+          isDefaultHtml: htmlCodeToUse === DEFAULT_HTML,
+          hasBufferUpdate: !!bufferUpdate,
+          bufferUpdateLength: bufferUpdate?.htmlCode?.length || 0,
+          hasGlobalUpdate: !!globalUpdate,
+          globalUpdateLength: globalUpdate?.htmlCode?.length || 0,
+          resultsHtmlLength: completeResults[index]?.htmlCode?.length || 0,
+        });
+
         if (!htmlCodeToUse || htmlCodeToUse === DEFAULT_HTML) {
-          console.error(`DetailPage #${index} 数据无效！`, {
-            htmlCodeLength: htmlCodeToUse?.length || 0,
-            hasBufferUpdate: !!bufferUpdate,
-            hasGlobalUpdate: !!globalUpdate,
-            resultsHtmlLength: results[index]?.htmlCode?.length || 0,
+          console.error(`❌ DetailPage #${index} 数据无效！将使用默认 HTML`, {
+            updateBufferSize: updateBuffer.current.size,
+            globalBufferSize: globalState.updateBuffer?.size || 0,
+            allUpdateBufferKeys: Array.from(updateBuffer.current.keys()),
           });
+        } else {
+          console.log(
+            `✅ DetailPage #${index} 数据有效，HTML 长度: ${htmlCodeToUse.length}`,
+          );
         }
 
         // 使用唯一的 key 保存到 sessionStorage，避免冲突
@@ -599,17 +633,26 @@ export const ChatPage = () => {
           timestamp: Date.now(),
         };
 
+        console.log(
+          `保存到 uniqueKey: ${uniqueKey}, HTML 长度: ${htmlCodeToUse?.length || 0}`,
+        );
+
         try {
           sessionStorage.setItem(uniqueKey, JSON.stringify(detailData));
 
           // 验证数据已成功保存
           const saved = sessionStorage.getItem(uniqueKey);
           if (!saved) {
-            console.error(`验证失败：无法从 sessionStorage 读取 ${uniqueKey}`);
+            console.error(
+              `❌ 验证失败：无法从 sessionStorage 读取 ${uniqueKey}`,
+            );
           } else {
             const parsed = JSON.parse(saved);
+            console.log(
+              `✅ uniqueKey 保存成功，HTML 长度: ${parsed.htmlCode?.length || 0}`,
+            );
             if (!parsed.htmlCode || parsed.htmlCode === DEFAULT_HTML) {
-              console.warn(`保存的数据无效，将使用当前 results`);
+              console.error(`❌ 保存的数据是默认 HTML！`);
             }
           }
         } catch (error) {
