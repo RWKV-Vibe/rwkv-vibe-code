@@ -18,7 +18,9 @@ const ChatgptPromptInputComponent = React.forwardRef<
   ChatgptPromptInputProps
 >(({ className, onSubmit, disabled = false, ...props }, ref) => {
   const internalTextareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const [internalValue, setInternalValue] = React.useState('');
+  const [internalValue, setInternalValue] = React.useState(
+    props.defaultValue?.toString() || '',
+  );
 
   // 使用外部传入的 value 或内部 state
   const isControlled = props.value !== undefined;

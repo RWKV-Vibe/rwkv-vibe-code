@@ -46,9 +46,12 @@ export const ChatPage = () => {
     return saved ? JSON.parse(saved) : [];
   });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [prompt, setPrompt] = useState(() => {
-    return localStorage.getItem('chatPagePrompt') || '';
-  });
+  // 使用 ref 存储输入值，不通过 state，避免输入时重新渲染
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const initialPrompt = useMemo(
+    () => localStorage.getItem('chatPagePrompt') || '',
+    [],
+  );
   const totalCount = 24;
 
   // 计算已完成的任务数（使用 Set 追踪已完成的索引）
@@ -289,7 +292,6 @@ export const ChatPage = () => {
       abortControllerRef.current = newAbortController;
       globalState.abortController = newAbortController;
 
-      setPrompt(userPrompt);
       setIsGenerating(true);
       globalState.isGenerating = true;
 
@@ -623,14 +625,7 @@ export const ChatPage = () => {
     [results, globalState],
   );
 
-  const handlePromptChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setPrompt(e.target.value);
-    },
-    [],
-  );
-
-  // 将输入框区域提取为独立的 memoized 组件
+  // 输入框占位符
   const inputPlaceholder = useMemo(() => t('chatpage.inputPlaceholder'), [t]);
 
   // Prompt 优化相关状态
@@ -648,7 +643,9 @@ export const ChatPage = () => {
 
   // 使用优化后的 Prompt
   const handleUseOptimizedPrompt = useCallback((optimizedPrompt: string) => {
-    setPrompt(optimizedPrompt);
+    if (inputRef.current) {
+      inputRef.current.value = optimizedPrompt;
+    }
   }, []);
 
   // 预设 Prompt 建议
@@ -668,8 +665,18 @@ export const ChatPage = () => {
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
-      setPrompt(suggestion);
       handleGenerate(suggestion);
+    },
+    [handleGenerate],
+  );
+
+  // 提交时从 input 元素获取值
+  const handleSubmit = useCallback(
+    (content?: string) => {
+      const valueToSubmit = content || inputRef.current?.value || '';
+      if (valueToSubmit.trim()) {
+        handleGenerate(valueToSubmit);
+      }
     },
     [handleGenerate],
   );
@@ -762,7 +769,7 @@ export const ChatPage = () => {
       {/* Prompt 优化 Dialog */}
       <PromptOptimizeDialog
         isOpen={isOptimizeDialogOpen}
-        initialPrompt={prompt}
+        initialPrompt={inputRef.current?.value || initialPrompt}
         onClose={handleCloseOptimizeDialog}
         onUsePrompt={handleUseOptimizedPrompt}
       />
@@ -771,13 +778,14 @@ export const ChatPage = () => {
       <div className="border-b border-border dark:border-gray-700 bg-white dark:bg-[#252525]">
         <div className="max-w-[1400px] mx-auto p-6">
           <div className="flex items-center gap-4">
-            {/* 输入框 */}
+            {/* 输入框 - 非受控组件，输入时不触发重新渲染 */}
             <div className="flex-1">
               <ChatgptPromptInput
-                value={prompt}
-                onChange={handlePromptChange}
+                ref={inputRef}
+                key={initialPrompt}
+                defaultValue={initialPrompt}
                 placeholder={inputPlaceholder}
-                onSubmit={handleGenerate}
+                onSubmit={handleSubmit}
               />
             </div>
 
