@@ -48,9 +48,10 @@ export const ChatPage = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   // 使用 ref 存储输入值，不通过 state，避免输入时重新渲染
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // 优先使用从首页传来的 initialMessage，否则从 localStorage 恢复
   const initialPrompt = useMemo(
-    () => localStorage.getItem('chatPagePrompt') || '',
-    [],
+    () => initialMessage || localStorage.getItem('chatPagePrompt') || '',
+    [initialMessage],
   );
   const totalCount = 24;
 
