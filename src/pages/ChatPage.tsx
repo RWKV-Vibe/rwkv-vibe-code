@@ -95,6 +95,7 @@ export const ChatPage = () => {
     Map<number, { content: string; htmlCode: string }>
   >(globalState.updateBuffer);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionStorageUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 组件挂载时恢复全局状态
   useEffect(() => {
@@ -234,10 +235,22 @@ export const ChatPage = () => {
     }
   }, [results, iframeRenderQueue, batchSize]);
 
-  // 保存状态到 sessionStorage
+  // 保存状态到 sessionStorage（由 flushUpdates 负责，这里作为备份）
   useEffect(() => {
     if (results.length > 0) {
-      sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+      // 使用 requestIdleCallback 在空闲时保存，避免阻塞
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(
+          () => {
+            sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+          },
+          { timeout: 100 },
+        );
+      } else {
+        setTimeout(() => {
+          sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+        }, 0);
+      }
     }
   }, [results]);
 
@@ -317,12 +330,43 @@ export const ChatPage = () => {
       };
       broadcastChannel.addEventListener('message', handleBroadcastMessage);
 
+      // sessionStorage 更新节流器
+      const updateSessionStorage = () => {
+        if (sessionStorageUpdateTimeoutRef.current) {
+          clearTimeout(sessionStorageUpdateTimeoutRef.current);
+        }
+        sessionStorageUpdateTimeoutRef.current = setTimeout(() => {
+          try {
+            const savedResults = sessionStorage.getItem('chatPageResults');
+            if (savedResults) {
+              const results = JSON.parse(savedResults);
+              // 合并 updateBuffer 中的所有更新
+              updateBuffer.current.forEach((update, index) => {
+                if (results[index]) {
+                  results[index] = {
+                    ...results[index],
+                    content: update.content,
+                    htmlCode: update.htmlCode,
+                    isLoading: false,
+                  };
+                }
+              });
+              sessionStorage.setItem(
+                'chatPageResults',
+                JSON.stringify(results),
+              );
+            }
+          } catch (error) {
+            console.error('批量更新 sessionStorage 失败:', error);
+          }
+        }, 500); // 500ms 节流
+      };
+
       // 批量更新函数
       const flushUpdates = () => {
         if (updateBuffer.current.size > 0) {
           const updates = new Map(updateBuffer.current);
-          // 注意：不清空 updateBuffer，因为打开详情页时可能需要读取
-          // updateBuffer.current.clear();
+          // 不清空 updateBuffer，保留数据供 DetailPage 使用
 
           // 广播更新到所有打开的 DetailPage
           updates.forEach((update, index) => {
@@ -338,9 +382,9 @@ export const ChatPage = () => {
             }
           });
 
-          // 直接更新，不使用 requestAnimationFrame
-          setResults((prev) =>
-            prev.map((result, i) => {
+          // 更新 results 状态
+          setResults((prev) => {
+            const newResults = prev.map((result, i) => {
               const update = updates.get(i);
               return update
                 ? {
@@ -350,8 +394,15 @@ export const ChatPage = () => {
                     isLoading: false,
                   }
                 : result;
-            }),
-          );
+            });
+
+            // 立即保存到 sessionStorage
+            sessionStorage.setItem(
+              'chatPageResults',
+              JSON.stringify(newResults),
+            );
+            return newResults;
+          });
         }
       };
 
@@ -365,6 +416,9 @@ export const ChatPage = () => {
             updateBuffer.current.set(index, updateData);
             globalState.updateBuffer.set(index, updateData);
 
+            // 触发 sessionStorage 更新（节流 500ms）
+            updateSessionStorage();
+
             // 只有当该 index 的流式响应完全完成时，才标记为完成
             if (isComplete) {
               setCompletedIndexes((prev) => {
@@ -374,7 +428,7 @@ export const ChatPage = () => {
               });
             }
 
-            // 使用节流：每 300ms 批量更新一次
+            // 使用节流：每 300ms 批量更新一次 UI
             if (updateTimeoutRef.current) {
               clearTimeout(updateTimeoutRef.current);
             }
@@ -389,27 +443,37 @@ export const ChatPage = () => {
         if (updateTimeoutRef.current) {
           clearTimeout(updateTimeoutRef.current);
         }
+        if (sessionStorageUpdateTimeoutRef.current) {
+          clearTimeout(sessionStorageUpdateTimeoutRef.current);
+        }
         flushUpdates();
 
-        // 等待 state 更新后，立即保存到 sessionStorage（使用 updateBuffer 的最新数据）
+        // 立即最后一次更新 sessionStorage
+        updateSessionStorage();
+        // 再次确保所有数据已保存（延迟 100ms）
         setTimeout(() => {
-          const finalResults = resultsRef.current.map((result, i) => {
-            // 优先使用 updateBuffer 中的最新数据
-            const update =
-              updateBuffer.current.get(i) || globalState.updateBuffer.get(i);
-            return update
-              ? {
-                  ...result,
-                  content: update.content,
-                  htmlCode: update.htmlCode,
-                  isLoading: false,
+          try {
+            const savedResults = sessionStorage.getItem('chatPageResults');
+            if (savedResults) {
+              const results = JSON.parse(savedResults);
+              updateBuffer.current.forEach((update, index) => {
+                if (results[index]) {
+                  results[index] = {
+                    ...results[index],
+                    content: update.content,
+                    htmlCode: update.htmlCode,
+                    isLoading: false,
+                  };
                 }
-              : result;
-          });
-          sessionStorage.setItem(
-            'chatPageResults',
-            JSON.stringify(finalResults),
-          );
+              });
+              sessionStorage.setItem(
+                'chatPageResults',
+                JSON.stringify(results),
+              );
+            }
+          } catch (error) {
+            console.error('最终保存 sessionStorage 失败:', error);
+          }
         }, 100);
 
         // 广播生成完成
@@ -428,6 +492,12 @@ export const ChatPage = () => {
         if (error instanceof Error && error.name !== 'AbortError') {
           console.error('生成失败:', error);
         }
+
+        // 清理定时器
+        if (sessionStorageUpdateTimeoutRef.current) {
+          clearTimeout(sessionStorageUpdateTimeoutRef.current);
+        }
+
         // 将所有仍在加载的卡片标记为加载完成
         setResults((prev) =>
           prev.map((result) => ({ ...result, isLoading: false })),
@@ -458,60 +528,68 @@ export const ChatPage = () => {
   const handleOpenDetail = useCallback(
     (index: number) => {
       if (results[index] && !results[index].isLoading) {
-        // 优先级：updateBuffer > results > sessionStorage
-        let htmlCodeToUse = results[index].htmlCode;
-        let contentToUse = results[index].content;
-
-        // 1. 首先从 updateBuffer 获取最新数据
-        const latestUpdate = updateBuffer.current.get(index);
-        if (latestUpdate) {
-          htmlCodeToUse = latestUpdate.htmlCode;
-          contentToUse = latestUpdate.content;
+        // 先确保 sessionStorage 有最新数据
+        try {
+          const currentResults = results.map((result, i) => {
+            const bufferData =
+              updateBuffer.current.get(i) || globalState.updateBuffer.get(i);
+            return bufferData
+              ? {
+                  ...result,
+                  content: bufferData.content,
+                  htmlCode: bufferData.htmlCode,
+                  isLoading: false,
+                }
+              : result;
+          });
+          sessionStorage.setItem(
+            'chatPageResults',
+            JSON.stringify(currentResults),
+          );
+        } catch (error) {
+          console.error('保存 chatPageResults 失败:', error);
         }
 
-        // 2. 如果是默认值或空，从 sessionStorage 的 chatPageResults 获取
-        if (!htmlCodeToUse || htmlCodeToUse === DEFAULT_HTML) {
+        // 获取当前索引的最新数据
+        const bufferUpdate = updateBuffer.current.get(index);
+        const globalUpdate = globalState.updateBuffer.get(index);
+
+        // 优先级：updateBuffer > globalState.updateBuffer > results
+        let htmlCodeToUse =
+          bufferUpdate?.htmlCode ||
+          globalUpdate?.htmlCode ||
+          results[index].htmlCode;
+        let contentToUse =
+          bufferUpdate?.content ||
+          globalUpdate?.content ||
+          results[index].content;
+
+        // 最后验证：如果还是默认值，从 sessionStorage 再读一次
+        if (htmlCodeToUse === DEFAULT_HTML || !htmlCodeToUse) {
           try {
-            const savedResults = sessionStorage.getItem('chatPageResults');
-            if (savedResults) {
-              const parsedResults = JSON.parse(savedResults);
+            const saved = sessionStorage.getItem('chatPageResults');
+            if (saved) {
+              const parsed = JSON.parse(saved);
               if (
-                parsedResults[index] &&
-                parsedResults[index].htmlCode &&
-                parsedResults[index].htmlCode !== DEFAULT_HTML
+                parsed[index]?.htmlCode &&
+                parsed[index].htmlCode !== DEFAULT_HTML
               ) {
-                htmlCodeToUse = parsedResults[index].htmlCode;
-                contentToUse = parsedResults[index].content;
+                htmlCodeToUse = parsed[index].htmlCode;
+                contentToUse = parsed[index].content;
               }
             }
           } catch (error) {
-            console.error('从 sessionStorage 读取结果失败:', error);
+            console.error('验证时读取 sessionStorage 失败:', error);
           }
         }
 
-        // 3. 如果还是默认值，从全局状态获取
+        // 验证数据有效性
         if (!htmlCodeToUse || htmlCodeToUse === DEFAULT_HTML) {
-          const globalState = (window as any).__chatPageGlobalState;
-          if (globalState && globalState.updateBuffer) {
-            const globalUpdate = globalState.updateBuffer.get(index);
-            if (
-              globalUpdate &&
-              globalUpdate.htmlCode &&
-              globalUpdate.htmlCode !== DEFAULT_HTML
-            ) {
-              htmlCodeToUse = globalUpdate.htmlCode;
-              contentToUse = globalUpdate.content;
-            }
-          }
-        }
-
-        // 验证数据有效性（调试用）
-        if (!htmlCodeToUse || htmlCodeToUse === DEFAULT_HTML) {
-          console.warn(`DetailPage #${index} 数据可能无效:`, {
+          console.error(`DetailPage #${index} 数据无效！`, {
             htmlCodeLength: htmlCodeToUse?.length || 0,
-            hasUpdateBuffer: updateBuffer.current.has(index),
+            hasBufferUpdate: !!bufferUpdate,
+            hasGlobalUpdate: !!globalUpdate,
             resultsHtmlLength: results[index]?.htmlCode?.length || 0,
-            isDefaultHtml: htmlCodeToUse === DEFAULT_HTML,
           });
         }
 
@@ -692,13 +770,19 @@ export const ChatPage = () => {
       updateTimeoutRef.current = null;
     }
 
+    // 清理 sessionStorage 更新定时器
+    if (sessionStorageUpdateTimeoutRef.current) {
+      clearTimeout(sessionStorageUpdateTimeoutRef.current);
+      sessionStorageUpdateTimeoutRef.current = null;
+    }
+
     // 立即应用所有待处理的更新
     if (updateBuffer.current.size > 0) {
       const updates = new Map(updateBuffer.current);
       // 不清空 buffer，保留数据供 DetailPage 使用
 
-      setResults((prev) =>
-        prev.map((result, i) => {
+      setResults((prev) => {
+        const newResults = prev.map((result, i) => {
           const update = updates.get(i);
           return update
             ? {
@@ -708,13 +792,22 @@ export const ChatPage = () => {
                 isLoading: false,
               }
             : { ...result, isLoading: false };
-        }),
-      );
+        });
+
+        // 立即保存到 sessionStorage
+        sessionStorage.setItem('chatPageResults', JSON.stringify(newResults));
+        return newResults;
+      });
     } else {
       // 将所有仍在加载的结果标记为加载完成
-      setResults((prev) =>
-        prev.map((result) => ({ ...result, isLoading: false })),
-      );
+      setResults((prev) => {
+        const newResults = prev.map((result) => ({
+          ...result,
+          isLoading: false,
+        }));
+        sessionStorage.setItem('chatPageResults', JSON.stringify(newResults));
+        return newResults;
+      });
     }
 
     setIsGenerating(false);

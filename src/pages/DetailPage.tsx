@@ -33,78 +33,55 @@ export const DetailPage = () => {
 
   // 从 sessionStorage 获取初始数据
   const [initialHtmlCode] = useState(() => {
-    if (resultIndex !== undefined) {
-      // 优先使用 uniqueKey
-      let saved = sessionStorage.getItem(uniqueKey);
+    if (resultIndex === undefined) {
+      return (location.state as { htmlCode?: string })?.htmlCode || DEFAULT_HTML;
+    }
 
-      // 如果没有，尝试使用旧的 key 格式
-      if (!saved) {
-        saved = sessionStorage.getItem(`detail-${resultIndex}`);
-      }
+    let htmlCode = DEFAULT_HTML;
 
-      if (saved) {
-        try {
-          const data = JSON.parse(saved);
-          const htmlCode = data.htmlCode || DEFAULT_HTML;
-
-          // 如果获取到的是默认 HTML，尝试从其他来源获取
-          if (htmlCode === DEFAULT_HTML) {
-            console.warn(
-              `DetailPage #${resultIndex} 从 sessionStorage 获取的是默认 HTML，尝试从其他来源获取`,
-            );
-          } else {
-            return htmlCode;
-          }
-        } catch (error) {
-          console.error('解析 sessionStorage 数据失败:', error);
+    // 1. 优先从 chatPageResults 获取（最可靠）
+    try {
+      const chatPageResults = sessionStorage.getItem('chatPageResults');
+      if (chatPageResults) {
+        const results = JSON.parse(chatPageResults);
+        if (results[resultIndex]?.htmlCode && results[resultIndex].htmlCode !== DEFAULT_HTML) {
+          htmlCode = results[resultIndex].htmlCode;
+          return htmlCode;
         }
-      } else {
-        console.warn(
-          `DetailPage #${resultIndex} 没有找到初始数据，key: ${uniqueKey}`,
-        );
       }
+    } catch (error) {
+      console.error('从 chatPageResults 读取失败:', error);
+    }
 
-      // 尝试从全局状态获取
+    // 2. 从 uniqueKey 获取（新标签页专用数据）
+    try {
+      const saved = sessionStorage.getItem(uniqueKey);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.htmlCode && data.htmlCode !== DEFAULT_HTML) {
+          return data.htmlCode;
+        }
+      }
+    } catch (error) {
+      console.error('从 uniqueKey 读取失败:', error);
+    }
+
+    // 3. 从全局状态获取（跨组件共享数据）
+    try {
       const globalState = (window as any).__chatPageGlobalState;
-      if (globalState && globalState.updateBuffer) {
+      if (globalState?.updateBuffer) {
         const latestUpdate = globalState.updateBuffer.get(resultIndex);
-        if (
-          latestUpdate &&
-          latestUpdate.htmlCode &&
-          latestUpdate.htmlCode !== DEFAULT_HTML
-        ) {
+        if (latestUpdate?.htmlCode && latestUpdate.htmlCode !== DEFAULT_HTML) {
           return latestUpdate.htmlCode;
         }
       }
-
-      // 尝试从 chatPageResults 获取
-      try {
-        const chatPageResults = sessionStorage.getItem('chatPageResults');
-        if (chatPageResults) {
-          const results = JSON.parse(chatPageResults);
-          if (results[resultIndex]) {
-            const htmlCode = results[resultIndex].htmlCode;
-            if (htmlCode && htmlCode !== DEFAULT_HTML) {
-              return htmlCode;
-            } else {
-              console.warn(
-                `DetailPage #${resultIndex} chatPageResults 中的数据无效:`,
-                {
-                  htmlCodeLength: htmlCode?.length || 0,
-                  isDefaultHtml: htmlCode === DEFAULT_HTML,
-                  isLoading: results[resultIndex].isLoading,
-                },
-              );
-            }
-          }
-        } else {
-          console.warn(`DetailPage #${resultIndex} chatPageResults 为空`);
-        }
-      } catch (error) {
-        console.error('从 chatPageResults 读取失败:', error);
-      }
+    } catch (error) {
+      console.error('从 globalState 读取失败:', error);
     }
-    return (location.state as { htmlCode?: string })?.htmlCode || DEFAULT_HTML;
+
+    // 4. 如果都失败，警告并返回默认值
+    console.warn(`DetailPage #${resultIndex} 无法获取有效数据，使用默认 HTML`);
+    return DEFAULT_HTML;
   });
 
   const [htmlCode, setHtmlCode] = useState(initialHtmlCode);
