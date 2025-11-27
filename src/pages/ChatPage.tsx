@@ -254,11 +254,8 @@ export const ChatPage = () => {
     }
   }, [results]);
 
-  useEffect(() => {
-    if (prompt) {
-      localStorage.setItem('chatPagePrompt', prompt);
-    }
-  }, [prompt]);
+  // 移除实时保存 prompt，避免输入卡顿
+  // prompt 会在 handleGenerate 时保存
 
   // 处理初始消息 - 只执行一次，并且如果已经有结果就不重复执行
   const hasProcessedInitialMessage = useRef(false);
@@ -298,6 +295,9 @@ export const ChatPage = () => {
       // 清除旧的结果和标记
       localStorage.removeItem('chatPageResults');
       localStorage.removeItem('hasProcessedInitialMessage');
+
+      // 保存新的 prompt
+      localStorage.setItem('chatPagePrompt', userPrompt);
 
       // 清空 iframe 渲染队列，重置批处理标记
       setIframeRenderQueue(new Set());

@@ -30,9 +30,10 @@ export const HomePage = () => {
 
   const handleSubmit = (content: string) => {
     if (content.trim()) {
-      sessionStorage.removeItem('chatPageResults');
-      sessionStorage.removeItem('chatPagePrompt');
-      sessionStorage.removeItem('hasProcessedInitialMessage');
+      // 清除 localStorage 缓存（ChatPage 现在使用 localStorage）
+      localStorage.removeItem('chatPageResults');
+      localStorage.removeItem('chatPagePrompt');
+      localStorage.removeItem('hasProcessedInitialMessage');
 
       navigate('/chat', { state: { initialMessage: content } });
       setInputValue('');
@@ -43,7 +44,10 @@ export const HomePage = () => {
     if (confirm('确定要清除所有缓存吗？这将退出登录并清除所有本地数据。')) {
       // 清除认证信息
       logout();
-      // 清除其他缓存
+      // 清除其他缓存（ChatPage 使用 localStorage）
+      localStorage.removeItem('chatPageResults');
+      localStorage.removeItem('chatPagePrompt');
+      localStorage.removeItem('hasProcessedInitialMessage');
       sessionStorage.clear();
       // 页面会自动重定向到登录页面
     }
