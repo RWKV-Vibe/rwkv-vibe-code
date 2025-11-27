@@ -369,6 +369,14 @@ export const ChatPage = () => {
 
           console.log(`flushUpdates: 准备更新 ${updates.size} 个结果`);
 
+          // 输出更新详情
+          const updateDetails = Array.from(updates.entries())
+            .slice(0, 3)
+            .map(
+              ([idx, data]) => `#${idx}: ${data.htmlCode?.length || 0} 字符`,
+            );
+          console.log('更新详情（前3个）:', updateDetails);
+
           // 广播更新到所有打开的 DetailPage
           updates.forEach((update, index) => {
             try {
@@ -402,14 +410,19 @@ export const ChatPage = () => {
               'chatPageResults',
               JSON.stringify(newResults),
             );
+
+            // 验证保存
+            const savedLength = newResults.filter(
+              (r) => r.htmlCode && r.htmlCode !== DEFAULT_HTML,
+            ).length;
             console.log(
-              `flushUpdates: 已保存到 sessionStorage，总数: ${newResults.length}`,
+              `flushUpdates: 已保存 ${newResults.length} 个结果，其中 ${savedLength} 个有效`,
             );
 
             return newResults;
           });
         } else {
-          console.log('flushUpdates: updateBuffer 为空，跳过更新');
+          console.warn('⚠️ flushUpdates: updateBuffer 为空，跳过更新');
         }
       };
 
@@ -454,6 +467,19 @@ export const ChatPage = () => {
 
         console.log(
           `生成完成，开始最终数据保存。updateBuffer 大小: ${updateBuffer.current.size}`,
+        );
+        console.log(
+          'updateBuffer 的所有 keys:',
+          Array.from(updateBuffer.current.keys()),
+        );
+
+        // 输出前 3 个 buffer 数据的长度
+        const samples = Array.from(updateBuffer.current.entries()).slice(0, 3);
+        console.log(
+          '前 3 个 buffer 数据:',
+          samples.map(
+            ([idx, data]) => `#${idx}: ${data.htmlCode?.length || 0} 字符`,
+          ),
         );
 
         flushUpdates();
@@ -548,221 +574,33 @@ export const ChatPage = () => {
   const handleOpenDetail = useCallback(
     (index: number) => {
       if (results[index] && !results[index].isLoading) {
-        let htmlCodeToUse: string;
-        let contentToUse: string;
+        // DetailPage 直接从 chatPageResults 读取，所以这里只需要打开新标签页
+        const detailUrl = `/detail?index=${index}`;
+        console.log(`打开 DetailPage #${index}，URL: ${detailUrl}`);
 
-        console.log(
-          `打开 DetailPage #${index}, 生成状态: ${isGenerating ? '生成中' : '已完成'}`,
-        );
-
-        // 方案A：生成中 - 从 updateBuffer 读取最新数据
-        if (isGenerating) {
-          const bufferUpdate = updateBuffer.current.get(index);
-          const globalUpdate = globalState.updateBuffer.get(index);
-
-          htmlCodeToUse =
-            bufferUpdate?.htmlCode ||
-            globalUpdate?.htmlCode ||
-            results[index].htmlCode;
-          contentToUse =
-            bufferUpdate?.content ||
-            globalUpdate?.content ||
-            results[index].content;
-
-          console.log(
-            `生成中：从 updateBuffer 读取，HTML 长度: ${htmlCodeToUse?.length || 0}`,
-          );
-        }
-        // 方案B：生成完成 - 直接从 results 状态读取
-        else {
-          htmlCodeToUse = results[index].htmlCode;
-          contentToUse = results[index].content;
-
-          console.log(
-            `已完成：从 results 读取，HTML 长度: ${htmlCodeToUse?.length || 0}`,
-          );
-
-          // 如果 results 中是默认值，尝试从 buffer 读取（兜底）
-          if (!htmlCodeToUse || htmlCodeToUse === DEFAULT_HTML) {
-            const bufferUpdate =
-              updateBuffer.current.get(index) ||
-              globalState.updateBuffer.get(index);
-            if (bufferUpdate) {
-              htmlCodeToUse = bufferUpdate.htmlCode;
-              contentToUse = bufferUpdate.content;
-              console.log(
-                `兜底：从 updateBuffer 读取，HTML 长度: ${htmlCodeToUse?.length || 0}`,
-              );
-            }
-          }
-        }
-
-        // 立即保存完整数据到 sessionStorage（使用当前 results）
+        // 在打开前，输出当前 sessionStorage 的状态
         try {
-          const currentResults = [...results];
-          // 如果是生成中，合并 buffer 数据
-          if (isGenerating) {
-            currentResults.forEach((result, i) => {
-              const bufferData =
-                updateBuffer.current.get(i) || globalState.updateBuffer.get(i);
-              if (bufferData) {
-                currentResults[i] = {
-                  ...result,
-                  content: bufferData.content,
-                  htmlCode: bufferData.htmlCode,
-                  isLoading: false,
-                };
-              }
+          const saved = sessionStorage.getItem('chatPageResults');
+          if (saved) {
+            const savedResults = JSON.parse(saved);
+            console.log(`当前 sessionStorage 状态:`, {
+              total: savedResults.length,
+              targetIndex: index,
+              targetHtmlLength: savedResults[index]?.htmlCode?.length || 0,
+              targetIsDefault: savedResults[index]?.htmlCode === DEFAULT_HTML,
             });
-          }
-
-          sessionStorage.setItem(
-            'chatPageResults',
-            JSON.stringify(currentResults),
-          );
-          console.log(
-            `✅ 已保存 ${currentResults.length} 个结果到 sessionStorage`,
-          );
-        } catch (error) {
-          console.error('保存 chatPageResults 失败:', error);
-        }
-
-        // 最终验证
-        if (!htmlCodeToUse || htmlCodeToUse === DEFAULT_HTML) {
-          console.error(`❌ DetailPage #${index} 数据无效！`, {
-            htmlCodeLength: htmlCodeToUse?.length || 0,
-            isGenerating,
-            resultsHtmlLength: results[index]?.htmlCode?.length || 0,
-            updateBufferSize: updateBuffer.current.size,
-          });
-          // 使用默认值
-          htmlCodeToUse = DEFAULT_HTML;
-          contentToUse = '';
-        } else {
-          console.log(
-            `✅ DetailPage #${index} 数据有效，HTML 长度: ${htmlCodeToUse.length}`,
-          );
-        }
-
-        // 使用唯一的 key 保存到 sessionStorage，避免冲突
-        const uniqueKey = `detail-${index}-${Date.now()}`;
-        const detailData = {
-          index,
-          htmlCode: htmlCodeToUse,
-          content: contentToUse,
-          timestamp: Date.now(),
-        };
-
-        console.log(
-          `保存到 uniqueKey: ${uniqueKey}, HTML 长度: ${htmlCodeToUse?.length || 0}`,
-        );
-
-        try {
-          sessionStorage.setItem(uniqueKey, JSON.stringify(detailData));
-
-          // 验证数据已成功保存
-          const saved = sessionStorage.getItem(uniqueKey);
-          if (!saved) {
-            console.error(
-              `❌ 验证失败：无法从 sessionStorage 读取 ${uniqueKey}`,
-            );
           } else {
-            const parsed = JSON.parse(saved);
-            console.log(
-              `✅ uniqueKey 保存成功，HTML 长度: ${parsed.htmlCode?.length || 0}`,
-            );
-            if (!parsed.htmlCode || parsed.htmlCode === DEFAULT_HTML) {
-              console.error(`❌ 保存的数据是默认 HTML！`);
-            }
+            console.error(`⚠️ sessionStorage 中没有 chatPageResults！`);
           }
         } catch (error) {
-          console.error(`保存到 sessionStorage 失败:`, error);
+          console.error('读取 sessionStorage 失败:', error);
         }
 
-        // 构建新标签页的 URL，传递唯一 key
-        const detailUrl = `/detail?index=${index}&key=${uniqueKey}`;
-
-        // 在新标签页中打开（不使用 window name，让每个标签页都是独立的）
-        const newWindow = window.open(
-          detailUrl,
-          '_blank',
-          'noopener,noreferrer',
-        );
-
-        // 等待新窗口加载后发送初始数据
-        if (newWindow) {
-          // 使用 Broadcast Channel 发送初始数据（重试 5 次）
-          let retryCount = 0;
-          const maxRetries = 5;
-
-          const sendInitialData = () => {
-            if (retryCount >= maxRetries) {
-              console.warn(
-                `发送初始数据到 DetailPage #${index} 失败，已重试 ${maxRetries} 次。数据已保存在 sessionStorage: ${uniqueKey}`,
-              );
-              return;
-            }
-
-            try {
-              const channel = new BroadcastChannel('rwkv-detail-channel');
-              channel.postMessage({
-                type: 'INIT_DETAIL',
-                index: index,
-                htmlCode: htmlCodeToUse,
-                content: contentToUse,
-                uniqueKey: uniqueKey,
-              });
-              channel.close();
-            } catch (error) {
-              console.error(`发送初始数据到 DetailPage #${index} 失败:`, error);
-            }
-
-            retryCount++;
-            if (retryCount < maxRetries) {
-              setTimeout(sendInitialData, 300);
-            }
-          };
-
-          // 延迟 200ms 开始发送，给新标签页加载时间
-          setTimeout(sendInitialData, 200);
-        } else {
-          console.error(`打开 DetailPage #${index} 失败，可能被浏览器阻止了`);
-        }
-
-        // 在空闲时保存状态
-        const saveState = () => {
-          if (updateBuffer.current.size > 0) {
-            const updates = new Map(updateBuffer.current);
-            const updatedResults = results.map((result, i) => {
-              const update = updates.get(i);
-              return update
-                ? {
-                    ...result,
-                    content: update.content,
-                    htmlCode: update.htmlCode,
-                    isLoading: false,
-                  }
-                : result;
-            });
-            sessionStorage.setItem(
-              'chatPageResults',
-              JSON.stringify(updatedResults),
-            );
-          } else {
-            sessionStorage.setItem('chatPageResults', JSON.stringify(results));
-          }
-          sessionStorage.setItem('chatPagePrompt', prompt);
-          sessionStorage.setItem('chatPageIsGenerating', String(isGenerating));
-        };
-
-        if ('requestIdleCallback' in window) {
-          (window as any).requestIdleCallback(saveState, { timeout: 100 });
-        } else {
-          setTimeout(saveState, 0);
-        }
+        // 在新标签页中打开
+        window.open(detailUrl, '_blank', 'noopener,noreferrer');
       }
     },
-    [results, prompt, isGenerating],
+    [results],
   );
 
   const handlePromptChange = useCallback(
