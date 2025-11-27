@@ -321,7 +321,8 @@ export const ChatPage = () => {
       const flushUpdates = () => {
         if (updateBuffer.current.size > 0) {
           const updates = new Map(updateBuffer.current);
-          updateBuffer.current.clear();
+          // 注意：不清空 updateBuffer，因为打开详情页时可能需要读取
+          // updateBuffer.current.clear();
 
           // 广播更新到所有打开的 DetailPage
           updates.forEach((update, index) => {
@@ -359,8 +360,10 @@ export const ChatPage = () => {
           userPrompt,
           totalCount,
           (index, content, htmlCode, isComplete = false) => {
-            // 将更新添加到缓冲区
-            updateBuffer.current.set(index, { content, htmlCode });
+            // 将更新添加到缓冲区（同时更新本地和全局）
+            const updateData = { content, htmlCode };
+            updateBuffer.current.set(index, updateData);
+            globalState.updateBuffer.set(index, updateData);
 
             // 只有当该 index 的流式响应完全完成时，才标记为完成
             if (isComplete) {
@@ -387,6 +390,27 @@ export const ChatPage = () => {
           clearTimeout(updateTimeoutRef.current);
         }
         flushUpdates();
+
+        // 等待 state 更新后，立即保存到 sessionStorage（使用 updateBuffer 的最新数据）
+        setTimeout(() => {
+          const finalResults = resultsRef.current.map((result, i) => {
+            // 优先使用 updateBuffer 中的最新数据
+            const update =
+              updateBuffer.current.get(i) || globalState.updateBuffer.get(i);
+            return update
+              ? {
+                  ...result,
+                  content: update.content,
+                  htmlCode: update.htmlCode,
+                  isLoading: false,
+                }
+              : result;
+          });
+          sessionStorage.setItem(
+            'chatPageResults',
+            JSON.stringify(finalResults),
+          );
+        }, 100);
 
         // 广播生成完成
         broadcastChannel.postMessage({ type: 'GENERATION_COMPLETE' });
@@ -434,10 +458,62 @@ export const ChatPage = () => {
   const handleOpenDetail = useCallback(
     (index: number) => {
       if (results[index] && !results[index].isLoading) {
-        // 获取最新的 htmlCode（优先从 buffer 中获取）
+        // 优先级：updateBuffer > results > sessionStorage
+        let htmlCodeToUse = results[index].htmlCode;
+        let contentToUse = results[index].content;
+
+        // 1. 首先从 updateBuffer 获取最新数据
         const latestUpdate = updateBuffer.current.get(index);
-        const htmlCodeToUse = latestUpdate?.htmlCode || results[index].htmlCode;
-        const contentToUse = latestUpdate?.content || results[index].content;
+        if (latestUpdate) {
+          htmlCodeToUse = latestUpdate.htmlCode;
+          contentToUse = latestUpdate.content;
+        }
+
+        // 2. 如果是默认值或空，从 sessionStorage 的 chatPageResults 获取
+        if (!htmlCodeToUse || htmlCodeToUse === DEFAULT_HTML) {
+          try {
+            const savedResults = sessionStorage.getItem('chatPageResults');
+            if (savedResults) {
+              const parsedResults = JSON.parse(savedResults);
+              if (
+                parsedResults[index] &&
+                parsedResults[index].htmlCode &&
+                parsedResults[index].htmlCode !== DEFAULT_HTML
+              ) {
+                htmlCodeToUse = parsedResults[index].htmlCode;
+                contentToUse = parsedResults[index].content;
+              }
+            }
+          } catch (error) {
+            console.error('从 sessionStorage 读取结果失败:', error);
+          }
+        }
+
+        // 3. 如果还是默认值，从全局状态获取
+        if (!htmlCodeToUse || htmlCodeToUse === DEFAULT_HTML) {
+          const globalState = (window as any).__chatPageGlobalState;
+          if (globalState && globalState.updateBuffer) {
+            const globalUpdate = globalState.updateBuffer.get(index);
+            if (
+              globalUpdate &&
+              globalUpdate.htmlCode &&
+              globalUpdate.htmlCode !== DEFAULT_HTML
+            ) {
+              htmlCodeToUse = globalUpdate.htmlCode;
+              contentToUse = globalUpdate.content;
+            }
+          }
+        }
+
+        // 验证数据有效性（调试用）
+        if (!htmlCodeToUse || htmlCodeToUse === DEFAULT_HTML) {
+          console.warn(`DetailPage #${index} 数据可能无效:`, {
+            htmlCodeLength: htmlCodeToUse?.length || 0,
+            hasUpdateBuffer: updateBuffer.current.has(index),
+            resultsHtmlLength: results[index]?.htmlCode?.length || 0,
+            isDefaultHtml: htmlCodeToUse === DEFAULT_HTML,
+          });
+        }
 
         // 使用唯一的 key 保存到 sessionStorage，避免冲突
         const uniqueKey = `detail-${index}-${Date.now()}`;
@@ -455,6 +531,11 @@ export const ChatPage = () => {
           const saved = sessionStorage.getItem(uniqueKey);
           if (!saved) {
             console.error(`验证失败：无法从 sessionStorage 读取 ${uniqueKey}`);
+          } else {
+            const parsed = JSON.parse(saved);
+            if (!parsed.htmlCode || parsed.htmlCode === DEFAULT_HTML) {
+              console.warn(`保存的数据无效，将使用当前 results`);
+            }
           }
         } catch (error) {
           console.error(`保存到 sessionStorage 失败:`, error);
@@ -614,8 +695,7 @@ export const ChatPage = () => {
     // 立即应用所有待处理的更新
     if (updateBuffer.current.size > 0) {
       const updates = new Map(updateBuffer.current);
-      updateBuffer.current.clear();
-      globalState.updateBuffer.clear();
+      // 不清空 buffer，保留数据供 DetailPage 使用
 
       setResults((prev) =>
         prev.map((result, i) => {

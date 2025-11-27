@@ -45,7 +45,16 @@ export const DetailPage = () => {
       if (saved) {
         try {
           const data = JSON.parse(saved);
-          return data.htmlCode || DEFAULT_HTML;
+          const htmlCode = data.htmlCode || DEFAULT_HTML;
+
+          // 如果获取到的是默认 HTML，尝试从其他来源获取
+          if (htmlCode === DEFAULT_HTML) {
+            console.warn(
+              `DetailPage #${resultIndex} 从 sessionStorage 获取的是默认 HTML，尝试从其他来源获取`,
+            );
+          } else {
+            return htmlCode;
+          }
         } catch (error) {
           console.error('解析 sessionStorage 数据失败:', error);
         }
@@ -59,9 +68,40 @@ export const DetailPage = () => {
       const globalState = (window as any).__chatPageGlobalState;
       if (globalState && globalState.updateBuffer) {
         const latestUpdate = globalState.updateBuffer.get(resultIndex);
-        if (latestUpdate && latestUpdate.htmlCode) {
+        if (
+          latestUpdate &&
+          latestUpdate.htmlCode &&
+          latestUpdate.htmlCode !== DEFAULT_HTML
+        ) {
           return latestUpdate.htmlCode;
         }
+      }
+
+      // 尝试从 chatPageResults 获取
+      try {
+        const chatPageResults = sessionStorage.getItem('chatPageResults');
+        if (chatPageResults) {
+          const results = JSON.parse(chatPageResults);
+          if (results[resultIndex]) {
+            const htmlCode = results[resultIndex].htmlCode;
+            if (htmlCode && htmlCode !== DEFAULT_HTML) {
+              return htmlCode;
+            } else {
+              console.warn(
+                `DetailPage #${resultIndex} chatPageResults 中的数据无效:`,
+                {
+                  htmlCodeLength: htmlCode?.length || 0,
+                  isDefaultHtml: htmlCode === DEFAULT_HTML,
+                  isLoading: results[resultIndex].isLoading,
+                },
+              );
+            }
+          }
+        } else {
+          console.warn(`DetailPage #${resultIndex} chatPageResults 为空`);
+        }
+      } catch (error) {
+        console.error('从 chatPageResults 读取失败:', error);
       }
     }
     return (location.state as { htmlCode?: string })?.htmlCode || DEFAULT_HTML;
