@@ -39,21 +39,21 @@ export const ChatPage = () => {
   const initialMessage = (location.state as { initialMessage?: string })
     ?.initialMessage;
 
-  // 从 sessionStorage 恢复状态
+  // 从 localStorage 恢复状态（跨标签页共享）
   const [results, setResults] = useState<GeneratedResult[]>(() => {
-    const saved = sessionStorage.getItem('chatPageResults');
+    const saved = localStorage.getItem('chatPageResults');
     return saved ? JSON.parse(saved) : [];
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [prompt, setPrompt] = useState(() => {
-    return sessionStorage.getItem('chatPagePrompt') || '';
+    return localStorage.getItem('chatPagePrompt') || '';
   });
   const totalCount = 24;
 
   // 计算已完成的任务数（使用 Set 追踪已完成的索引）
   const [completedIndexes, setCompletedIndexes] = useState<Set<number>>(() => {
-    // 初始化时从 sessionStorage 恢复的结果中计算已完成的索引
-    const saved = sessionStorage.getItem('chatPageResults');
+    // 初始化时从 localStorage 恢复的结果中计算已完成的索引
+    const saved = localStorage.getItem('chatPageResults');
     if (saved) {
       const savedResults = JSON.parse(saved);
       const completed = new Set<number>();
@@ -95,7 +95,7 @@ export const ChatPage = () => {
     Map<number, { content: string; htmlCode: string }>
   >(globalState.updateBuffer);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const sessionStorageUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const localStorageUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 组件挂载时恢复全局状态
   useEffect(() => {
@@ -110,7 +110,7 @@ export const ChatPage = () => {
   const [iframeRenderQueue, setIframeRenderQueue] = useState<Set<number>>(
     () => {
       // 如果有已保存的结果，将所有有内容的 iframe 加入队列（页面刷新恢复）
-      const saved = sessionStorage.getItem('chatPageResults');
+      const saved = localStorage.getItem('chatPageResults');
       if (saved) {
         const savedResults = JSON.parse(saved);
         const readyIndexes = savedResults
@@ -235,20 +235,20 @@ export const ChatPage = () => {
     }
   }, [results, iframeRenderQueue, batchSize]);
 
-  // 保存状态到 sessionStorage（由 flushUpdates 负责，这里作为备份）
+  // 保存状态到 localStorage（由 flushUpdates 负责，这里作为备份）
   useEffect(() => {
     if (results.length > 0) {
       // 使用 requestIdleCallback 在空闲时保存，避免阻塞
       if ('requestIdleCallback' in window) {
         (window as any).requestIdleCallback(
           () => {
-            sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+            localStorage.setItem('chatPageResults', JSON.stringify(results));
           },
           { timeout: 100 },
         );
       } else {
         setTimeout(() => {
-          sessionStorage.setItem('chatPageResults', JSON.stringify(results));
+          localStorage.setItem('chatPageResults', JSON.stringify(results));
         }, 0);
       }
     }
@@ -256,7 +256,7 @@ export const ChatPage = () => {
 
   useEffect(() => {
     if (prompt) {
-      sessionStorage.setItem('chatPagePrompt', prompt);
+      localStorage.setItem('chatPagePrompt', prompt);
     }
   }, [prompt]);
 
@@ -273,7 +273,7 @@ export const ChatPage = () => {
     ) {
       hasProcessedInitialMessage.current = true;
       // 标记已处理，避免返回后重复执行
-      sessionStorage.setItem('hasProcessedInitialMessage', 'true');
+      localStorage.setItem('hasProcessedInitialMessage', 'true');
       handleGenerate(initialMessage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -296,8 +296,8 @@ export const ChatPage = () => {
       globalState.isGenerating = true;
 
       // 清除旧的结果和标记
-      sessionStorage.removeItem('chatPageResults');
-      sessionStorage.removeItem('hasProcessedInitialMessage');
+      localStorage.removeItem('chatPageResults');
+      localStorage.removeItem('hasProcessedInitialMessage');
 
       // 清空 iframe 渲染队列，重置批处理标记
       setIframeRenderQueue(new Set());
@@ -330,10 +330,10 @@ export const ChatPage = () => {
       };
       broadcastChannel.addEventListener('message', handleBroadcastMessage);
 
-      // 立即更新 sessionStorage（不使用节流，确保数据实时可用）
+      // 立即更新 localStorage（不使用节流，确保数据实时可用）
       const updateSessionStorage = () => {
         try {
-          const savedResults = sessionStorage.getItem('chatPageResults');
+          const savedResults = localStorage.getItem('chatPageResults');
           if (savedResults) {
             const results = JSON.parse(savedResults);
             // 合并 updateBuffer 中的所有更新
@@ -350,14 +350,11 @@ export const ChatPage = () => {
               }
             });
             if (hasUpdate) {
-              sessionStorage.setItem(
-                'chatPageResults',
-                JSON.stringify(results),
-              );
+              localStorage.setItem('chatPageResults', JSON.stringify(results));
             }
           }
         } catch (error) {
-          console.error('更新 sessionStorage 失败:', error);
+          console.error('更新 localStorage 失败:', error);
         }
       };
 
@@ -405,11 +402,8 @@ export const ChatPage = () => {
                 : result;
             });
 
-            // 立即保存到 sessionStorage
-            sessionStorage.setItem(
-              'chatPageResults',
-              JSON.stringify(newResults),
-            );
+            // 立即保存到 localStorage
+            localStorage.setItem('chatPageResults', JSON.stringify(newResults));
 
             // 验证保存
             const savedLength = newResults.filter(
@@ -445,13 +439,13 @@ export const ChatPage = () => {
               });
             }
 
-            // 使用节流：每 300ms 批量更新一次 UI 和 sessionStorage
+            // 使用节流：每 300ms 批量更新一次 UI 和 localStorage
             if (updateTimeoutRef.current) {
               clearTimeout(updateTimeoutRef.current);
             }
             updateTimeoutRef.current = setTimeout(() => {
               flushUpdates();
-              updateSessionStorage(); // UI 更新后立即更新 sessionStorage
+              updateSessionStorage(); // UI 更新后立即更新 localStorage
             }, 300);
           },
           newAbortController,
@@ -461,8 +455,8 @@ export const ChatPage = () => {
         if (updateTimeoutRef.current) {
           clearTimeout(updateTimeoutRef.current);
         }
-        if (sessionStorageUpdateTimeoutRef.current) {
-          clearTimeout(sessionStorageUpdateTimeoutRef.current);
+        if (localStorageUpdateTimeoutRef.current) {
+          clearTimeout(localStorageUpdateTimeoutRef.current);
         }
 
         console.log(
@@ -505,7 +499,7 @@ export const ChatPage = () => {
               return result;
             });
 
-            sessionStorage.setItem(
+            localStorage.setItem(
               'chatPageResults',
               JSON.stringify(finalResults),
             );
@@ -518,7 +512,7 @@ export const ChatPage = () => {
                 .map((r, i) => `#${i}: ${r.htmlCode?.length || 0}`),
             );
           } catch (error) {
-            console.error('最终保存 sessionStorage 失败:', error);
+            console.error('最终保存 localStorage 失败:', error);
           }
         }, 200);
 
@@ -540,8 +534,8 @@ export const ChatPage = () => {
         }
 
         // 清理定时器
-        if (sessionStorageUpdateTimeoutRef.current) {
-          clearTimeout(sessionStorageUpdateTimeoutRef.current);
+        if (localStorageUpdateTimeoutRef.current) {
+          clearTimeout(localStorageUpdateTimeoutRef.current);
         }
 
         // 将所有仍在加载的卡片标记为加载完成
@@ -574,33 +568,58 @@ export const ChatPage = () => {
   const handleOpenDetail = useCallback(
     (index: number) => {
       if (results[index] && !results[index].isLoading) {
-        // DetailPage 直接从 chatPageResults 读取，所以这里只需要打开新标签页
-        const detailUrl = `/detail?index=${index}`;
-        console.log(`打开 DetailPage #${index}，URL: ${detailUrl}`);
+        console.log(`============ 打开 DetailPage #${index} ============`);
 
-        // 在打开前，输出当前 sessionStorage 的状态
+        // 强制立即保存当前所有数据到 localStorage
         try {
-          const saved = sessionStorage.getItem('chatPageResults');
-          if (saved) {
-            const savedResults = JSON.parse(saved);
-            console.log(`当前 sessionStorage 状态:`, {
-              total: savedResults.length,
-              targetIndex: index,
-              targetHtmlLength: savedResults[index]?.htmlCode?.length || 0,
-              targetIsDefault: savedResults[index]?.htmlCode === DEFAULT_HTML,
-            });
+          // 合并 updateBuffer 的最新数据
+          const finalResults = results.map((result, i) => {
+            const bufferData =
+              updateBuffer.current.get(i) || globalState.updateBuffer.get(i);
+            if (bufferData && bufferData.htmlCode) {
+              return {
+                ...result,
+                content: bufferData.content,
+                htmlCode: bufferData.htmlCode,
+                isLoading: false,
+              };
+            }
+            return result;
+          });
+
+          // 立即保存
+          localStorage.setItem('chatPageResults', JSON.stringify(finalResults));
+
+          console.log(`强制保存数据:`, {
+            总数: finalResults.length,
+            目标索引: index,
+            目标HTML长度: finalResults[index]?.htmlCode?.length || 0,
+            是否默认HTML: finalResults[index]?.htmlCode === DEFAULT_HTML,
+            来自buffer: updateBuffer.current.has(index),
+            来自results: !updateBuffer.current.has(index),
+          });
+
+          // 验证保存成功
+          const verify = localStorage.getItem('chatPageResults');
+          if (verify) {
+            const parsed = JSON.parse(verify);
+            console.log(
+              `✅ 验证保存成功，#${index} 的 HTML 长度: ${parsed[index]?.htmlCode?.length || 0}`,
+            );
           } else {
-            console.error(`⚠️ sessionStorage 中没有 chatPageResults！`);
+            console.error('❌ 验证失败：localStorage 保存失败！');
           }
         } catch (error) {
-          console.error('读取 sessionStorage 失败:', error);
+          console.error('强制保存失败:', error);
         }
 
         // 在新标签页中打开
+        const detailUrl = `/detail?index=${index}`;
         window.open(detailUrl, '_blank', 'noopener,noreferrer');
+        console.log(`============ 新标签页已打开 ============`);
       }
     },
-    [results],
+    [results, globalState],
   );
 
   const handlePromptChange = useCallback(
@@ -668,10 +687,10 @@ export const ChatPage = () => {
       updateTimeoutRef.current = null;
     }
 
-    // 清理 sessionStorage 更新定时器
-    if (sessionStorageUpdateTimeoutRef.current) {
-      clearTimeout(sessionStorageUpdateTimeoutRef.current);
-      sessionStorageUpdateTimeoutRef.current = null;
+    // 清理 localStorage 更新定时器
+    if (localStorageUpdateTimeoutRef.current) {
+      clearTimeout(localStorageUpdateTimeoutRef.current);
+      localStorageUpdateTimeoutRef.current = null;
     }
 
     // 立即应用所有待处理的更新
@@ -692,8 +711,8 @@ export const ChatPage = () => {
             : { ...result, isLoading: false };
         });
 
-        // 立即保存到 sessionStorage
-        sessionStorage.setItem('chatPageResults', JSON.stringify(newResults));
+        // 立即保存到 localStorage
+        localStorage.setItem('chatPageResults', JSON.stringify(newResults));
         return newResults;
       });
     } else {
@@ -703,7 +722,7 @@ export const ChatPage = () => {
           ...result,
           isLoading: false,
         }));
-        sessionStorage.setItem('chatPageResults', JSON.stringify(newResults));
+        localStorage.setItem('chatPageResults', JSON.stringify(newResults));
         return newResults;
       });
     }

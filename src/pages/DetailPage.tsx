@@ -39,30 +39,32 @@ export const DetailPage = () => {
       );
     }
 
-    console.log(`DetailPage #${resultIndex} 初始化，开始读取数据...`);
+    console.log(
+      `DetailPage #${resultIndex} 初始化，从 localStorage 读取数据...`,
+    );
 
-    // 1. 先从 chatPageResults 读取（生成完成后的数据都在这里）
+    // 1. 先从 localStorage 的 chatPageResults 读取（跨标签页共享）
     try {
-      const chatPageResults = sessionStorage.getItem('chatPageResults');
+      const chatPageResults = localStorage.getItem('chatPageResults');
       if (chatPageResults) {
         const results = JSON.parse(chatPageResults);
         const htmlCode = results[resultIndex]?.htmlCode;
 
         if (htmlCode && htmlCode !== DEFAULT_HTML) {
           console.log(
-            `✅ 从 chatPageResults 读取成功，HTML 长度: ${htmlCode.length}`,
+            `✅ 从 localStorage 读取成功，HTML 长度: ${htmlCode.length}`,
           );
           return htmlCode;
         } else {
           console.log(
-            `chatPageResults 中索引 ${resultIndex} 的数据无效，长度: ${htmlCode?.length || 0}`,
+            `localStorage 中索引 ${resultIndex} 的数据无效，长度: ${htmlCode?.length || 0}`,
           );
         }
       } else {
-        console.log('chatPageResults 不存在，尝试从 globalState 读取');
+        console.log('localStorage 不存在，尝试从 globalState 读取');
       }
     } catch (error) {
-      console.error('从 chatPageResults 读取失败:', error);
+      console.error('从 localStorage 读取失败:', error);
     }
 
     // 2. 如果 chatPageResults 没有，从 globalState 读取（生成中的数据）
