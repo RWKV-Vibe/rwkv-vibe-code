@@ -330,36 +330,35 @@ export const ChatPage = () => {
       };
       broadcastChannel.addEventListener('message', handleBroadcastMessage);
 
-      // sessionStorage 更新节流器
+      // 立即更新 sessionStorage（不使用节流，确保数据实时可用）
       const updateSessionStorage = () => {
-        if (sessionStorageUpdateTimeoutRef.current) {
-          clearTimeout(sessionStorageUpdateTimeoutRef.current);
-        }
-        sessionStorageUpdateTimeoutRef.current = setTimeout(() => {
-          try {
-            const savedResults = sessionStorage.getItem('chatPageResults');
-            if (savedResults) {
-              const results = JSON.parse(savedResults);
-              // 合并 updateBuffer 中的所有更新
-              updateBuffer.current.forEach((update, index) => {
-                if (results[index]) {
-                  results[index] = {
-                    ...results[index],
-                    content: update.content,
-                    htmlCode: update.htmlCode,
-                    isLoading: false,
-                  };
-                }
-              });
+        try {
+          const savedResults = sessionStorage.getItem('chatPageResults');
+          if (savedResults) {
+            const results = JSON.parse(savedResults);
+            // 合并 updateBuffer 中的所有更新
+            let hasUpdate = false;
+            updateBuffer.current.forEach((update, index) => {
+              if (results[index]) {
+                results[index] = {
+                  ...results[index],
+                  content: update.content,
+                  htmlCode: update.htmlCode,
+                  isLoading: false,
+                };
+                hasUpdate = true;
+              }
+            });
+            if (hasUpdate) {
               sessionStorage.setItem(
                 'chatPageResults',
                 JSON.stringify(results),
               );
             }
-          } catch (error) {
-            console.error('批量更新 sessionStorage 失败:', error);
           }
-        }, 500); // 500ms 节流
+        } catch (error) {
+          console.error('更新 sessionStorage 失败:', error);
+        }
       };
 
       // 批量更新函数
@@ -416,9 +415,6 @@ export const ChatPage = () => {
             updateBuffer.current.set(index, updateData);
             globalState.updateBuffer.set(index, updateData);
 
-            // 触发 sessionStorage 更新（节流 500ms）
-            updateSessionStorage();
-
             // 只有当该 index 的流式响应完全完成时，才标记为完成
             if (isComplete) {
               setCompletedIndexes((prev) => {
@@ -428,12 +424,13 @@ export const ChatPage = () => {
               });
             }
 
-            // 使用节流：每 300ms 批量更新一次 UI
+            // 使用节流：每 300ms 批量更新一次 UI 和 sessionStorage
             if (updateTimeoutRef.current) {
               clearTimeout(updateTimeoutRef.current);
             }
             updateTimeoutRef.current = setTimeout(() => {
               flushUpdates();
+              updateSessionStorage(); // UI 更新后立即更新 sessionStorage
             }, 300);
           },
           newAbortController,
@@ -528,7 +525,21 @@ export const ChatPage = () => {
   const handleOpenDetail = useCallback(
     (index: number) => {
       if (results[index] && !results[index].isLoading) {
-        // 先确保 sessionStorage 有最新数据
+        // 获取当前索引的最新数据
+        const bufferUpdate = updateBuffer.current.get(index);
+        const globalUpdate = globalState.updateBuffer.get(index);
+
+        // 优先级：updateBuffer > globalState.updateBuffer > results
+        let htmlCodeToUse =
+          bufferUpdate?.htmlCode ||
+          globalUpdate?.htmlCode ||
+          results[index].htmlCode;
+        let contentToUse =
+          bufferUpdate?.content ||
+          globalUpdate?.content ||
+          results[index].content;
+
+        // 先确保 sessionStorage 有最新数据（合并所有 buffer 数据）
         try {
           const currentResults = results.map((result, i) => {
             const bufferData =
@@ -549,20 +560,6 @@ export const ChatPage = () => {
         } catch (error) {
           console.error('保存 chatPageResults 失败:', error);
         }
-
-        // 获取当前索引的最新数据
-        const bufferUpdate = updateBuffer.current.get(index);
-        const globalUpdate = globalState.updateBuffer.get(index);
-
-        // 优先级：updateBuffer > globalState.updateBuffer > results
-        let htmlCodeToUse =
-          bufferUpdate?.htmlCode ||
-          globalUpdate?.htmlCode ||
-          results[index].htmlCode;
-        let contentToUse =
-          bufferUpdate?.content ||
-          globalUpdate?.content ||
-          results[index].content;
 
         // 最后验证：如果还是默认值，从 sessionStorage 再读一次
         if (htmlCodeToUse === DEFAULT_HTML || !htmlCodeToUse) {

@@ -34,19 +34,34 @@ export const DetailPage = () => {
   // 从 sessionStorage 获取初始数据
   const [initialHtmlCode] = useState(() => {
     if (resultIndex === undefined) {
-      return (location.state as { htmlCode?: string })?.htmlCode || DEFAULT_HTML;
+      console.warn('DetailPage: resultIndex 未定义');
+      return (
+        (location.state as { htmlCode?: string })?.htmlCode || DEFAULT_HTML
+      );
     }
 
+    console.log(`DetailPage #${resultIndex} 开始初始化...`);
     let htmlCode = DEFAULT_HTML;
 
     // 1. 优先从 chatPageResults 获取（最可靠）
     try {
       const chatPageResults = sessionStorage.getItem('chatPageResults');
+      console.log(`尝试从 chatPageResults 读取, 存在: ${!!chatPageResults}`);
       if (chatPageResults) {
         const results = JSON.parse(chatPageResults);
-        if (results[resultIndex]?.htmlCode && results[resultIndex].htmlCode !== DEFAULT_HTML) {
-          htmlCode = results[resultIndex].htmlCode;
-          return htmlCode;
+        console.log(
+          `chatPageResults 总数: ${results.length}, 目标索引: ${resultIndex}`,
+        );
+        if (results[resultIndex]) {
+          const resultHtmlCode = results[resultIndex].htmlCode;
+          console.log(
+            `读取到的 htmlCode 长度: ${resultHtmlCode?.length || 0}, 是否为默认: ${resultHtmlCode === DEFAULT_HTML}`,
+          );
+          if (resultHtmlCode && resultHtmlCode !== DEFAULT_HTML) {
+            htmlCode = resultHtmlCode;
+            console.log(`✅ 从 chatPageResults 成功获取数据`);
+            return htmlCode;
+          }
         }
       }
     } catch (error) {
@@ -55,11 +70,14 @@ export const DetailPage = () => {
 
     // 2. 从 uniqueKey 获取（新标签页专用数据）
     try {
+      console.log(`尝试从 uniqueKey 读取: ${uniqueKey}`);
       const saved = sessionStorage.getItem(uniqueKey);
       if (saved) {
         const data = JSON.parse(saved);
         if (data.htmlCode && data.htmlCode !== DEFAULT_HTML) {
-          return data.htmlCode;
+          htmlCode = data.htmlCode;
+          console.log(`✅ 从 uniqueKey 成功获取数据, 长度: ${htmlCode.length}`);
+          return htmlCode;
         }
       }
     } catch (error) {
@@ -69,10 +87,20 @@ export const DetailPage = () => {
     // 3. 从全局状态获取（跨组件共享数据）
     try {
       const globalState = (window as any).__chatPageGlobalState;
+      console.log(
+        `尝试从 globalState 读取, updateBuffer 存在: ${!!globalState?.updateBuffer}`,
+      );
       if (globalState?.updateBuffer) {
         const latestUpdate = globalState.updateBuffer.get(resultIndex);
+        console.log(
+          `globalState.updateBuffer 中的数据: ${!!latestUpdate}, htmlCode长度: ${latestUpdate?.htmlCode?.length || 0}`,
+        );
         if (latestUpdate?.htmlCode && latestUpdate.htmlCode !== DEFAULT_HTML) {
-          return latestUpdate.htmlCode;
+          htmlCode = latestUpdate.htmlCode;
+          console.log(
+            `✅ 从 globalState 成功获取数据, 长度: ${htmlCode.length}`,
+          );
+          return htmlCode;
         }
       }
     } catch (error) {
@@ -80,7 +108,9 @@ export const DetailPage = () => {
     }
 
     // 4. 如果都失败，警告并返回默认值
-    console.warn(`DetailPage #${resultIndex} 无法获取有效数据，使用默认 HTML`);
+    console.error(
+      `❌ DetailPage #${resultIndex} 无法获取有效数据，使用默认 HTML。尝试的数据源: chatPageResults, uniqueKey(${uniqueKey}), globalState`,
+    );
     return DEFAULT_HTML;
   });
 
