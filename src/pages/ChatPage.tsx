@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
 import { MarkdownRenderer } from '@/components/business/MarkdownRenderer';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { PromptOptimizeDialog } from '@/components/business/PromptOptimizeDialog';
-import { Loader2, Wand2, Square, Check } from 'lucide-react';
+import { Loader2, Wand2, Square, Check, Home } from 'lucide-react';
 import { AIService } from '@/service/ai';
 import { useTranslation } from 'react-i18next';
 
@@ -35,6 +35,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 
 export const ChatPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const initialMessage = (location.state as { initialMessage?: string })
     ?.initialMessage;
@@ -731,8 +732,28 @@ export const ChatPage = () => {
     globalState.isGenerating = false;
   }, [globalState]);
 
+  // 返回首页
+  const handleBackToHome = useCallback(() => {
+    navigate('/');
+  }, [navigate]);
+
   return (
     <div className="flex flex-col h-screen bg-background dark:bg-[#1e1e1e]">
+      {/* 返回首页按钮 - 左上角 */}
+      <div className="fixed top-6 left-6 z-50">
+        <button
+          onClick={handleBackToHome}
+          className="flex items-center justify-center h-16 w-16 rounded-full
+                     bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600
+                     text-white shadow-lg hover:shadow-xl
+                     transition-all duration-200 hover:scale-105
+                     border-2 border-blue-400 dark:border-blue-400"
+          title={t('chatpage.backToHome') || '返回首页'}
+        >
+          <Home className="h-6 w-6" />
+        </button>
+      </div>
+
       {/* Language Switcher - 右上角 */}
       <div className="fixed top-6 right-6 z-50">
         <LanguageSwitcher />
