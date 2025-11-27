@@ -24,22 +24,43 @@ export const DetailPage = () => {
   const location = useLocation();
   const { t } = useTranslation();
 
-  // 从 URL 查询参数获取 index
+  // 从 URL 查询参数获取 index 和 uniqueKey
   const searchParams = new URLSearchParams(location.search);
   const resultIndex = searchParams.get('index')
     ? parseInt(searchParams.get('index')!)
     : undefined;
+  const uniqueKey = searchParams.get('key') || `detail-${resultIndex}`;
 
   // 从 sessionStorage 获取初始数据
   const [initialHtmlCode] = useState(() => {
     if (resultIndex !== undefined) {
-      const saved = sessionStorage.getItem(`detail-${resultIndex}`);
+      // 优先使用 uniqueKey
+      let saved = sessionStorage.getItem(uniqueKey);
+
+      // 如果没有，尝试使用旧的 key 格式
+      if (!saved) {
+        saved = sessionStorage.getItem(`detail-${resultIndex}`);
+      }
+
       if (saved) {
         try {
           const data = JSON.parse(saved);
           return data.htmlCode || DEFAULT_HTML;
-        } catch {
-          // ignore
+        } catch (error) {
+          console.error('解析 sessionStorage 数据失败:', error);
+        }
+      } else {
+        console.warn(
+          `DetailPage #${resultIndex} 没有找到初始数据，key: ${uniqueKey}`,
+        );
+      }
+
+      // 尝试从全局状态获取
+      const globalState = (window as any).__chatPageGlobalState;
+      if (globalState && globalState.updateBuffer) {
+        const latestUpdate = globalState.updateBuffer.get(resultIndex);
+        if (latestUpdate && latestUpdate.htmlCode) {
+          return latestUpdate.htmlCode;
         }
       }
     }
@@ -53,7 +74,10 @@ export const DetailPage = () => {
 
   // 监听 BroadcastChannel 接收实时更新
   useEffect(() => {
-    if (resultIndex === undefined) return;
+    if (resultIndex === undefined) {
+      console.warn('DetailPage: resultIndex 未定义');
+      return;
+    }
 
     const channel = new BroadcastChannel('rwkv-detail-channel');
 
@@ -75,20 +99,38 @@ export const DetailPage = () => {
     channel.onmessage = (event) => {
       const { type, index, htmlCode: newHtmlCode } = event.data;
 
-      // 只处理与当前 index 匹配的消息
+      // 处理初始化消息（INIT_DETAIL）- 作为备用初始化方式
+      if (type === 'INIT_DETAIL' && index === resultIndex) {
+        if (!hasUserEdited && newHtmlCode && newHtmlCode !== DEFAULT_HTML) {
+          setHtmlCode(newHtmlCode);
+          setIsLiveUpdating(globalState?.isGenerating || false);
+        }
+        return;
+      }
+
+      // 只处理与当前 index 匹配的 UPDATE_CONTENT 消息
       if (index !== resultIndex) return;
 
       if (type === 'UPDATE_CONTENT' && newHtmlCode && !hasUserEdited) {
         setHtmlCode(newHtmlCode);
         setIsLiveUpdating(true);
-        console.log(`DetailPage 收到更新: index ${index}`);
-      } else if (type === 'GENERATION_COMPLETE') {
+      } else if (
+        type === 'GENERATION_COMPLETE' ||
+        type === 'GENERATION_ERROR'
+      ) {
         setIsLiveUpdating(false);
-        console.log('DetailPage: 生成完成');
       }
     };
 
-    return () => channel.close();
+    // 发送就绪信号
+    channel.postMessage({
+      type: 'DETAIL_READY',
+      index: resultIndex,
+    });
+
+    return () => {
+      channel.close();
+    };
   }, [resultIndex, hasUserEdited]);
 
   // 监听用户编辑

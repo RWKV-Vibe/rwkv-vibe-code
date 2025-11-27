@@ -218,10 +218,6 @@ export const ChatPage = () => {
           const toAdd = stillNotInQueue.slice(0, batchSize);
           toAdd.forEach((index) => newQueue.add(index));
 
-          console.log(
-            `渲染批次: 添加 ${toAdd.length} 个 iframe，当前队列大小: ${newQueue.size}`,
-          );
-
           // 如果还有剩余，继续下一批
           if (stillNotInQueue.length > batchSize) {
             setTimeout(processBatch, 600);
@@ -275,7 +271,6 @@ export const ChatPage = () => {
       // 取消之前正在进行的请求
       if (globalState.abortController) {
         globalState.abortController.abort();
-        console.log('已取消之前的生成请求');
       }
 
       // 创建新的 AbortController
@@ -313,22 +308,33 @@ export const ChatPage = () => {
       // BroadcastChannel 用于跨标签页通信
       const broadcastChannel = new BroadcastChannel('rwkv-detail-channel');
 
+      // 监听 DetailPage 的就绪信号
+      const activeDetailPages = new Set<number>();
+      const handleBroadcastMessage = (event: MessageEvent) => {
+        if (event.data.type === 'DETAIL_READY') {
+          activeDetailPages.add(event.data.index);
+        }
+      };
+      broadcastChannel.addEventListener('message', handleBroadcastMessage);
+
       // 批量更新函数
       const flushUpdates = () => {
         if (updateBuffer.current.size > 0) {
           const updates = new Map(updateBuffer.current);
           updateBuffer.current.clear();
 
-          console.log(`批量更新: ${updates.size} 个结果`);
-
           // 广播更新到所有打开的 DetailPage
           updates.forEach((update, index) => {
-            broadcastChannel.postMessage({
-              type: 'UPDATE_CONTENT',
-              index,
-              htmlCode: update.htmlCode,
-              content: update.content,
-            });
+            try {
+              broadcastChannel.postMessage({
+                type: 'UPDATE_CONTENT',
+                index,
+                htmlCode: update.htmlCode,
+                content: update.content,
+              });
+            } catch (error) {
+              console.error(`发送更新到 DetailPage #${index} 失败:`, error);
+            }
           });
 
           // 直接更新，不使用 requestAnimationFrame
@@ -363,9 +369,6 @@ export const ChatPage = () => {
                 newSet.add(index);
                 return newSet;
               });
-              console.log(
-                `任务完成: #${index}, 总完成数: ${completedIndexes.size + 1}`,
-              );
             }
 
             // 使用节流：每 300ms 批量更新一次
@@ -387,20 +390,34 @@ export const ChatPage = () => {
 
         // 广播生成完成
         broadcastChannel.postMessage({ type: 'GENERATION_COMPLETE' });
-        broadcastChannel.close();
+
+        // 延迟关闭 channel，确保所有消息都已发送
+        setTimeout(() => {
+          broadcastChannel.removeEventListener(
+            'message',
+            handleBroadcastMessage,
+          );
+          broadcastChannel.close();
+        }, 500);
       } catch (error: unknown) {
         // 检查是否是用户主动取消
-        if (error instanceof Error && error.name === 'AbortError') {
-          console.log('生成已被用户取消');
-        } else {
+        if (error instanceof Error && error.name !== 'AbortError') {
           console.error('生成失败:', error);
         }
         // 将所有仍在加载的卡片标记为加载完成
         setResults((prev) =>
           prev.map((result) => ({ ...result, isLoading: false })),
         );
-        // 关闭 BroadcastChannel
-        broadcastChannel.close();
+        // 广播错误消息
+        broadcastChannel.postMessage({ type: 'GENERATION_ERROR' });
+        // 延迟关闭 BroadcastChannel
+        setTimeout(() => {
+          broadcastChannel.removeEventListener(
+            'message',
+            handleBroadcastMessage,
+          );
+          broadcastChannel.close();
+        }, 500);
       } finally {
         // 只有当前 AbortController 没有被新的请求替换时才设置为 false
         if (globalState.abortController === newAbortController) {
@@ -422,20 +439,76 @@ export const ChatPage = () => {
         const htmlCodeToUse = latestUpdate?.htmlCode || results[index].htmlCode;
         const contentToUse = latestUpdate?.content || results[index].content;
 
-        // 先保存到 sessionStorage，作为初始数据
+        // 使用唯一的 key 保存到 sessionStorage，避免冲突
+        const uniqueKey = `detail-${index}-${Date.now()}`;
         const detailData = {
           index,
           htmlCode: htmlCodeToUse,
           content: contentToUse,
           timestamp: Date.now(),
         };
-        sessionStorage.setItem(`detail-${index}`, JSON.stringify(detailData));
 
-        // 构建新标签页的 URL，使用查询参数传递 index
-        const detailUrl = `/detail?index=${index}`;
+        try {
+          sessionStorage.setItem(uniqueKey, JSON.stringify(detailData));
 
-        // 在新标签页中打开
-        window.open(detailUrl, `detail-${index}`, 'noopener,noreferrer');
+          // 验证数据已成功保存
+          const saved = sessionStorage.getItem(uniqueKey);
+          if (!saved) {
+            console.error(`验证失败：无法从 sessionStorage 读取 ${uniqueKey}`);
+          }
+        } catch (error) {
+          console.error(`保存到 sessionStorage 失败:`, error);
+        }
+
+        // 构建新标签页的 URL，传递唯一 key
+        const detailUrl = `/detail?index=${index}&key=${uniqueKey}`;
+
+        // 在新标签页中打开（不使用 window name，让每个标签页都是独立的）
+        const newWindow = window.open(
+          detailUrl,
+          '_blank',
+          'noopener,noreferrer',
+        );
+
+        // 等待新窗口加载后发送初始数据
+        if (newWindow) {
+          // 使用 Broadcast Channel 发送初始数据（重试 5 次）
+          let retryCount = 0;
+          const maxRetries = 5;
+
+          const sendInitialData = () => {
+            if (retryCount >= maxRetries) {
+              console.warn(
+                `发送初始数据到 DetailPage #${index} 失败，已重试 ${maxRetries} 次。数据已保存在 sessionStorage: ${uniqueKey}`,
+              );
+              return;
+            }
+
+            try {
+              const channel = new BroadcastChannel('rwkv-detail-channel');
+              channel.postMessage({
+                type: 'INIT_DETAIL',
+                index: index,
+                htmlCode: htmlCodeToUse,
+                content: contentToUse,
+                uniqueKey: uniqueKey,
+              });
+              channel.close();
+            } catch (error) {
+              console.error(`发送初始数据到 DetailPage #${index} 失败:`, error);
+            }
+
+            retryCount++;
+            if (retryCount < maxRetries) {
+              setTimeout(sendInitialData, 300);
+            }
+          };
+
+          // 延迟 200ms 开始发送，给新标签页加载时间
+          setTimeout(sendInitialData, 200);
+        } else {
+          console.error(`打开 DetailPage #${index} 失败，可能被浏览器阻止了`);
+        }
 
         // 在空闲时保存状态
         const saveState = () => {

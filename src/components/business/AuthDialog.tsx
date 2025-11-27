@@ -26,15 +26,13 @@ export const AuthDialog = memo(({ onSubmit }: AuthDialogProps) => {
         return;
       }
 
-      // 验证 URL 格式
-      try {
-        new URL(apiUrl);
-      } catch {
-        setError('请输入有效的 URL 地址');
-        return;
+      // 如果没有协议前缀，自动添加 http://
+      let finalUrl = apiUrl.trim();
+      if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+        finalUrl = 'http://' + finalUrl;
       }
 
-      onSubmit(apiUrl.trim(), password.trim());
+      onSubmit(finalUrl, password.trim());
     },
     [apiUrl, password, onSubmit],
   );
@@ -44,7 +42,10 @@ export const AuthDialog = memo(({ onSubmit }: AuthDialogProps) => {
       {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/30 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div
+          className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/30 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: '1s' }}
+        />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-to-br from-purple-500/10 to-blue-500/10 rounded-full blur-3xl" />
       </div>
 
@@ -54,7 +55,9 @@ export const AuthDialog = memo(({ onSubmit }: AuthDialogProps) => {
           <div className="inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-purple-500 to-blue-600 rounded-3xl mb-8 shadow-lg">
             <Server className="h-16 w-16 text-white" />
           </div>
-          <h1 className="text-7xl md:text-8xl font-bold text-white mb-6">RWKV Vibe Code</h1>
+          <h1 className="text-7xl md:text-8xl font-bold text-white mb-6">
+            RWKV Vibe Code
+          </h1>
           <p className="text-3xl text-gray-300">请输入服务器配置以继续</p>
         </div>
 
@@ -73,13 +76,16 @@ export const AuthDialog = memo(({ onSubmit }: AuthDialogProps) => {
                   setApiUrl(e.target.value);
                   setError('');
                 }}
-                placeholder="http://192.168.1.100:8000/v1/chat/completions"
+                placeholder="192.168.0.82:8001/v1/chat/completions"
                 className="w-full pl-24 pr-8 py-8 bg-white/10 border-2 border-white/30 rounded-2xl
                            text-white text-3xl placeholder:text-gray-500
                            focus:border-purple-400 focus:outline-none focus:ring-4 focus:ring-purple-500/30
                            transition-all hover:bg-white/15"
               />
             </div>
+            <p className="mt-3 text-lg text-gray-400">
+              💡 无需输入 http://，系统会自动添加
+            </p>
           </div>
 
           {/* Password 输入 */}

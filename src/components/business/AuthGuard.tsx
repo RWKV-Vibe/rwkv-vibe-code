@@ -22,15 +22,13 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    // 验证 URL 格式
-    try {
-      new URL(apiUrl);
-    } catch {
-      setError('请输入有效的 URL 地址');
-      return;
+    // 如果没有协议前缀，自动添加 http://
+    let finalUrl = apiUrl.trim();
+    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      finalUrl = 'http://' + finalUrl;
     }
 
-    login(apiUrl.trim(), password.trim());
+    login(finalUrl, password.trim());
   };
 
   if (isAuthenticated) {
@@ -81,13 +79,16 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
                     setApiUrl(e.target.value);
                     setError('');
                   }}
-                  placeholder="http://192.168.1.100:8000/v1/chat/completions"
+                  placeholder="192.168.0.82:8001/v1/chat/completions"
                   className="w-full pl-24 pr-8 py-8 bg-white/10 border-2 border-white/30 rounded-2xl
                              text-3xl text-white placeholder-gray-500
                              focus:border-purple-400 focus:outline-none focus:ring-4 focus:ring-purple-500/30
                              transition-all duration-200 hover:bg-white/15"
                 />
               </div>
+              <p className="mt-3 text-lg text-gray-400">
+                💡 无需输入 http://，系统会自动添加
+              </p>
             </div>
 
             {/* 密码输入 */}

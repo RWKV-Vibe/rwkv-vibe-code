@@ -129,7 +129,9 @@ export const PromptOptimizeDialog = memo(
 
     // 计算已完成的任务数
     const completedTaskCount = useMemo(() => {
-      return optimizedResults.filter((result) => !result.isLoading && result.content).length;
+      return optimizedResults.filter(
+        (result) => !result.isLoading && result.content,
+      ).length;
     }, [optimizedResults]);
 
     // 复制指定索引的优化后的 Prompt
