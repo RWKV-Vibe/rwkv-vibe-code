@@ -40,28 +40,22 @@ export const DetailPage = () => {
       );
     }
 
-    console.log(`DetailPage #${resultIndex} 开始初始化...`);
     let htmlCode = DEFAULT_HTML;
 
     // 1. 优先从 chatPageResults 获取（最可靠）
     try {
       const chatPageResults = sessionStorage.getItem('chatPageResults');
-      console.log(`尝试从 chatPageResults 读取, 存在: ${!!chatPageResults}`);
       if (chatPageResults) {
         const results = JSON.parse(chatPageResults);
-        console.log(
-          `chatPageResults 总数: ${results.length}, 目标索引: ${resultIndex}`,
-        );
-        if (results[resultIndex]) {
-          const resultHtmlCode = results[resultIndex].htmlCode;
+        if (
+          results[resultIndex]?.htmlCode &&
+          results[resultIndex].htmlCode !== DEFAULT_HTML
+        ) {
+          htmlCode = results[resultIndex].htmlCode;
           console.log(
-            `读取到的 htmlCode 长度: ${resultHtmlCode?.length || 0}, 是否为默认: ${resultHtmlCode === DEFAULT_HTML}`,
+            `✅ DetailPage #${resultIndex} 从 chatPageResults 获取数据，长度: ${htmlCode.length}`,
           );
-          if (resultHtmlCode && resultHtmlCode !== DEFAULT_HTML) {
-            htmlCode = resultHtmlCode;
-            console.log(`✅ 从 chatPageResults 成功获取数据`);
-            return htmlCode;
-          }
+          return htmlCode;
         }
       }
     } catch (error) {
@@ -70,13 +64,14 @@ export const DetailPage = () => {
 
     // 2. 从 uniqueKey 获取（新标签页专用数据）
     try {
-      console.log(`尝试从 uniqueKey 读取: ${uniqueKey}`);
       const saved = sessionStorage.getItem(uniqueKey);
       if (saved) {
         const data = JSON.parse(saved);
         if (data.htmlCode && data.htmlCode !== DEFAULT_HTML) {
           htmlCode = data.htmlCode;
-          console.log(`✅ 从 uniqueKey 成功获取数据, 长度: ${htmlCode.length}`);
+          console.log(
+            `✅ DetailPage #${resultIndex} 从 uniqueKey 获取数据，长度: ${htmlCode.length}`,
+          );
           return htmlCode;
         }
       }
@@ -87,18 +82,12 @@ export const DetailPage = () => {
     // 3. 从全局状态获取（跨组件共享数据）
     try {
       const globalState = (window as any).__chatPageGlobalState;
-      console.log(
-        `尝试从 globalState 读取, updateBuffer 存在: ${!!globalState?.updateBuffer}`,
-      );
       if (globalState?.updateBuffer) {
         const latestUpdate = globalState.updateBuffer.get(resultIndex);
-        console.log(
-          `globalState.updateBuffer 中的数据: ${!!latestUpdate}, htmlCode长度: ${latestUpdate?.htmlCode?.length || 0}`,
-        );
         if (latestUpdate?.htmlCode && latestUpdate.htmlCode !== DEFAULT_HTML) {
           htmlCode = latestUpdate.htmlCode;
           console.log(
-            `✅ 从 globalState 成功获取数据, 长度: ${htmlCode.length}`,
+            `✅ DetailPage #${resultIndex} 从 globalState 获取数据，长度: ${htmlCode.length}`,
           );
           return htmlCode;
         }
@@ -109,7 +98,7 @@ export const DetailPage = () => {
 
     // 4. 如果都失败，警告并返回默认值
     console.error(
-      `❌ DetailPage #${resultIndex} 无法获取有效数据，使用默认 HTML。尝试的数据源: chatPageResults, uniqueKey(${uniqueKey}), globalState`,
+      `❌ DetailPage #${resultIndex} 无法获取有效数据，使用默认 HTML`,
     );
     return DEFAULT_HTML;
   });

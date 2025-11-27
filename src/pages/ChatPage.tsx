@@ -548,76 +548,96 @@ export const ChatPage = () => {
   const handleOpenDetail = useCallback(
     (index: number) => {
       if (results[index] && !results[index].isLoading) {
-        // 1. 立即构建完整的 results（合并所有 buffer 数据）
-        const completeResults = results.map((result, i) => {
-          const bufferData =
-            updateBuffer.current.get(i) || globalState.updateBuffer.get(i);
-          if (bufferData) {
-            return {
-              ...result,
-              content: bufferData.content,
-              htmlCode: bufferData.htmlCode,
-              isLoading: false,
-            };
-          }
-          return result;
-        });
+        let htmlCodeToUse: string;
+        let contentToUse: string;
 
-        // 2. 立即保存到 sessionStorage
+        console.log(
+          `打开 DetailPage #${index}, 生成状态: ${isGenerating ? '生成中' : '已完成'}`,
+        );
+
+        // 方案A：生成中 - 从 updateBuffer 读取最新数据
+        if (isGenerating) {
+          const bufferUpdate = updateBuffer.current.get(index);
+          const globalUpdate = globalState.updateBuffer.get(index);
+
+          htmlCodeToUse =
+            bufferUpdate?.htmlCode ||
+            globalUpdate?.htmlCode ||
+            results[index].htmlCode;
+          contentToUse =
+            bufferUpdate?.content ||
+            globalUpdate?.content ||
+            results[index].content;
+
+          console.log(
+            `生成中：从 updateBuffer 读取，HTML 长度: ${htmlCodeToUse?.length || 0}`,
+          );
+        }
+        // 方案B：生成完成 - 直接从 results 状态读取
+        else {
+          htmlCodeToUse = results[index].htmlCode;
+          contentToUse = results[index].content;
+
+          console.log(
+            `已完成：从 results 读取，HTML 长度: ${htmlCodeToUse?.length || 0}`,
+          );
+
+          // 如果 results 中是默认值，尝试从 buffer 读取（兜底）
+          if (!htmlCodeToUse || htmlCodeToUse === DEFAULT_HTML) {
+            const bufferUpdate =
+              updateBuffer.current.get(index) ||
+              globalState.updateBuffer.get(index);
+            if (bufferUpdate) {
+              htmlCodeToUse = bufferUpdate.htmlCode;
+              contentToUse = bufferUpdate.content;
+              console.log(
+                `兜底：从 updateBuffer 读取，HTML 长度: ${htmlCodeToUse?.length || 0}`,
+              );
+            }
+          }
+        }
+
+        // 立即保存完整数据到 sessionStorage（使用当前 results）
         try {
+          const currentResults = [...results];
+          // 如果是生成中，合并 buffer 数据
+          if (isGenerating) {
+            currentResults.forEach((result, i) => {
+              const bufferData =
+                updateBuffer.current.get(i) || globalState.updateBuffer.get(i);
+              if (bufferData) {
+                currentResults[i] = {
+                  ...result,
+                  content: bufferData.content,
+                  htmlCode: bufferData.htmlCode,
+                  isLoading: false,
+                };
+              }
+            });
+          }
+
           sessionStorage.setItem(
             'chatPageResults',
-            JSON.stringify(completeResults),
+            JSON.stringify(currentResults),
           );
           console.log(
-            `已保存 chatPageResults 到 sessionStorage, 总数: ${completeResults.length}`,
+            `✅ 已保存 ${currentResults.length} 个结果到 sessionStorage`,
           );
-
-          // 验证保存成功
-          const saved = sessionStorage.getItem('chatPageResults');
-          if (!saved) {
-            console.error('验证失败：sessionStorage 保存失败');
-          } else {
-            const parsed = JSON.parse(saved);
-            console.log(
-              `验证成功：已保存 ${parsed.length} 个结果，目标索引 ${index} 的 HTML 长度: ${parsed[index]?.htmlCode?.length || 0}`,
-            );
-          }
         } catch (error) {
           console.error('保存 chatPageResults 失败:', error);
         }
 
-        // 3. 获取当前索引的最新数据
-        const bufferUpdate = updateBuffer.current.get(index);
-        const globalUpdate = globalState.updateBuffer.get(index);
-
-        // 优先级：updateBuffer > globalState.updateBuffer > completeResults[index]
-        let htmlCodeToUse =
-          bufferUpdate?.htmlCode ||
-          globalUpdate?.htmlCode ||
-          completeResults[index].htmlCode;
-        let contentToUse =
-          bufferUpdate?.content ||
-          globalUpdate?.content ||
-          completeResults[index].content;
-
-        // 验证数据有效性
-        console.log(`准备打开 DetailPage #${index}:`, {
-          htmlCodeLength: htmlCodeToUse?.length || 0,
-          isDefaultHtml: htmlCodeToUse === DEFAULT_HTML,
-          hasBufferUpdate: !!bufferUpdate,
-          bufferUpdateLength: bufferUpdate?.htmlCode?.length || 0,
-          hasGlobalUpdate: !!globalUpdate,
-          globalUpdateLength: globalUpdate?.htmlCode?.length || 0,
-          resultsHtmlLength: completeResults[index]?.htmlCode?.length || 0,
-        });
-
+        // 最终验证
         if (!htmlCodeToUse || htmlCodeToUse === DEFAULT_HTML) {
-          console.error(`❌ DetailPage #${index} 数据无效！将使用默认 HTML`, {
+          console.error(`❌ DetailPage #${index} 数据无效！`, {
+            htmlCodeLength: htmlCodeToUse?.length || 0,
+            isGenerating,
+            resultsHtmlLength: results[index]?.htmlCode?.length || 0,
             updateBufferSize: updateBuffer.current.size,
-            globalBufferSize: globalState.updateBuffer?.size || 0,
-            allUpdateBufferKeys: Array.from(updateBuffer.current.keys()),
           });
+          // 使用默认值
+          htmlCodeToUse = DEFAULT_HTML;
+          contentToUse = '';
         } else {
           console.log(
             `✅ DetailPage #${index} 数据有效，HTML 长度: ${htmlCodeToUse.length}`,
