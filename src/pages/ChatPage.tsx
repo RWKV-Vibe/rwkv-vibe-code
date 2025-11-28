@@ -777,7 +777,7 @@ export const ChatPage = () => {
 
       {/* 顶部：输入区域 */}
       <div className="border-b border-border dark:border-gray-700 bg-white dark:bg-[#252525]">
-        <div className="max-w-[1400px] mx-auto p-6">
+        <div className="max-w-[2400px] mx-auto p-6">
           <div className="flex items-center gap-4">
             {/* 输入框 - 非受控组件，输入时不触发重新渲染 */}
             <div className="flex-1">
