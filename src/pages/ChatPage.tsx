@@ -55,6 +55,10 @@ export const ChatPage = () => {
   );
   const totalCount = 24;
 
+  // Token 速率计算相关状态
+  const [tokenRate, setTokenRate] = useState<number>(0);
+  const [totalTokens, setTotalTokens] = useState<number>(0);
+
   // 计算已完成的任务数（使用 Set 追踪已完成的索引）
   const [completedIndexes, setCompletedIndexes] = useState<Set<number>>(() => {
     // 初始化时从 localStorage 恢复的结果中计算已完成的索引
@@ -310,6 +314,10 @@ export const ChatPage = () => {
       // 清空已完成索引集合
       setCompletedIndexes(new Set());
 
+      // 重置 token 计数
+      setTokenRate(0);
+      setTotalTokens(0);
+
       // 初始化 24 个占位符
       const placeholders: GeneratedResult[] = Array.from(
         { length: totalCount },
@@ -428,7 +436,22 @@ export const ChatPage = () => {
         await AIService.generateMultipleResponses(
           userPrompt,
           totalCount,
-          (index, content, htmlCode, isComplete = false) => {
+          (
+            index,
+            content,
+            htmlCode,
+            isComplete = false,
+            currentTokenRate,
+            currentTotalTokens,
+          ) => {
+            // 更新 token 速率和总数
+            if (currentTokenRate !== undefined) {
+              setTokenRate(currentTokenRate);
+            }
+            if (currentTotalTokens !== undefined) {
+              setTotalTokens(currentTotalTokens);
+            }
+
             // 将更新添加到缓冲区（同时更新本地和全局）
             const updateData = { content, htmlCode };
             updateBuffer.current.set(index, updateData);
@@ -824,6 +847,18 @@ export const ChatPage = () => {
                     </>
                   )}
                 </div>
+
+                {/* Token 速率显示 */}
+                {isGenerating && tokenRate > 0 && (
+                  <div className="flex flex-col items-center gap-1 px-8 py-4 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                    <span className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                      {tokenRate.toLocaleString()} tok/s
+                    </span>
+                    <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                      总计: {totalTokens.toLocaleString()} tokens
+                    </span>
+                  </div>
+                )}
 
                 {/* 终止生成按钮 */}
                 {isGenerating && (

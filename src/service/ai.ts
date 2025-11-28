@@ -172,6 +172,8 @@ export class AIService {
       content: string,
       htmlCode: string,
       isComplete?: boolean,
+      tokenRate?: number,
+      totalTokens?: number,
     ) => void,
     abortController?: AbortController,
   ): Promise<Array<{ content: string; htmlCode: string }>> {
@@ -189,6 +191,10 @@ export class AIService {
     // 存储每个 index 上次渲染的HTML长度，用于判断是否需要更新
     const lastRenderedLength: Map<number, number> = new Map();
     const results: Array<{ content: string; htmlCode: string }> = [];
+
+    // Token 速率计算
+    let totalTokenCount = 0;
+    const startTime = Date.now();
 
     try {
       const authConfig = getAuthConfig();
@@ -259,6 +265,16 @@ export class AIService {
                 if (delta && index >= 0 && index < count) {
                   contentBuffers[index] += delta;
 
+                  // 累计 token 数（delta 的字符数作为 token 的估算）
+                  totalTokenCount += delta.length;
+
+                  // 计算当前 token 速率
+                  const elapsedSeconds = (Date.now() - startTime) / 1000;
+                  const tokenRate =
+                    elapsedSeconds > 0
+                      ? Math.round(totalTokenCount / elapsedSeconds)
+                      : 0;
+
                   // 检查是否应该触发渲染
                   const lastLength = lastRenderedLength.get(index) || 0;
                   const shouldRender = this.shouldTriggerRender(
@@ -271,9 +287,16 @@ export class AIService {
                       contentBuffers[index],
                     );
                     console.log(
-                      `Rendering index ${index}, content length: ${contentBuffers[index].length}, HTML length: ${htmlCode.length}`,
+                      `Rendering index ${index}, content length: ${contentBuffers[index].length}, HTML length: ${htmlCode.length}, Token rate: ${tokenRate} tok/s`,
                     );
-                    onProgress(index, contentBuffers[index], htmlCode, false);
+                    onProgress(
+                      index,
+                      contentBuffers[index],
+                      htmlCode,
+                      false,
+                      tokenRate,
+                      totalTokenCount,
+                    );
                     // 更新上次渲染的长度
                     lastRenderedLength.set(index, contentBuffers[index].length);
                   }
@@ -287,6 +310,10 @@ export class AIService {
       }
 
       // 构建最终结果，并确保最后一次触发渲染（标记为完成）
+      const elapsedSeconds = (Date.now() - startTime) / 1000;
+      const finalTokenRate =
+        elapsedSeconds > 0 ? Math.round(totalTokenCount / elapsedSeconds) : 0;
+
       for (let i = 0; i < count; i++) {
         const content = contentBuffers[i] || '';
         const htmlCode = this.extractHTMLCode(content);
@@ -294,9 +321,20 @@ export class AIService {
 
         // 最后一次调用onProgress，标记该 index 已完成
         if (onProgress && content.length > 0) {
-          onProgress(i, content, htmlCode, true); // isComplete = true
+          onProgress(
+            i,
+            content,
+            htmlCode,
+            true,
+            finalTokenRate,
+            totalTokenCount,
+          ); // isComplete = true
         }
       }
+
+      console.log(
+        `✅ 生成完成！总计: ${totalTokenCount} tokens, 平均速率: ${finalTokenRate} tok/s, 用时: ${elapsedSeconds.toFixed(2)}s`,
+      );
 
       return results;
     } catch (err: unknown) {
