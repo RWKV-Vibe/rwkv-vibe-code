@@ -15,12 +15,10 @@ export const HomePage = () => {
   const suggestions = [
     t('homepage.suggestions.hotel'),
     t('homepage.suggestions.museum'),
-    t('homepage.suggestions.portfolio'),
     t('homepage.suggestions.cafe'),
+    t('homepage.suggestions.retroShop'),
+    t('homepage.suggestions.pomodoro'),
     t('homepage.suggestions.saas'),
-    t('homepage.suggestions.realEstate'),
-    t('homepage.suggestions.corporate'),
-    t('homepage.suggestions.gallery'),
   ];
 
   const handleSuggestionClick = (suggestion: string) => {

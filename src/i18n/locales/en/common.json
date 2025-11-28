@@ -4,13 +4,11 @@
     "inputPlaceholder": "Describe your idea...",
     "suggestions": {
       "hotel": "Generate a hotel page in Shenzhen with a green theme",
-      "museum": "Create a Lu Xun Memorial Museum website with biography, literary works, and historical photo gallery",
-      "portfolio": "Design a minimalist personal portfolio website with modern colors and grid layout",
-      "cafe": "Create a cozy local coffee shop website with warm colors and elegant typography",
-      "saas": "Build a professional SaaS product landing page with feature descriptions and pricing plans",
-      "realEstate": "Create a high-end real estate showcase website with 3D floor plans and virtual tours",
-      "corporate": "Build a modern corporate website with team introduction and case studies",
-      "gallery": "Design an art gallery exhibition website with immersive visual presentation"
+      "museum": "Create a Lu Xun Memorial Museum website with parchment scroll color scheme, including biography, literary works display, and historical photo gallery",
+      "cafe": "Create a cozy local coffee shop website with warm color palette including light beige, cream white, and soft wood tones, paired with elegant typography using serif fonts and moderate spacing. Homepage includes brand introduction, menu showcase, event information, and contact details, with concise content highlighting the cafe's unique character and atmosphere",
+      "retroShop": "Create a 90s retro-style shop webpage named 'Electronic Museum' with cyberpunk color scheme including highly saturated neon pink, cyan, and charcoal black background, featuring six retro product cards and six nostalgic news items at the bottom, creating a nostalgic cyberpunk visual experience",
+      "pomodoro": "Create an immersive Pomodoro timer webpage. Features: Default 25-minute countdown with 'Start', 'Pause', and 'Reset' buttons. Browser native alert when countdown ends. Visual: Centered large digital time display with gradient background (pink to purple)",
+      "saas": "Build a professional SaaS product landing page with feature descriptions and pricing plans"
     }
   },
   "chatpage": {
