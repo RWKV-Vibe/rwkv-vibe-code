@@ -86,34 +86,72 @@ export class AIService {
     const newLength = newContent.length;
     const addedContent = newContent.substring(oldLength);
 
-    // 第一次渲染：当有内容且是第一次时（降低阈值到20字符）
-    if (oldLength === 0 && newLength > 20) {
+    // 第一次渲染：当检测到 <body> 标签且有足够内容时
+    // 提高阈值到 500，避免过早渲染不完整的内容
+    if (oldLength === 0 && newLength > 500) {
+      console.log(`[触发渲染] 首次渲染，内容长度: ${newLength}`);
       return true;
     }
 
-    // 关键闭合标签列表
-    const keyClosingTags = [
-      '</header>',
-      '</section>',
-      '</main>',
-      '</article>',
-      '</footer>',
-      '</nav>',
-      '</aside>',
-      '</div>', // 添加div标签
-      '</body>',
-      '</html>',
-    ];
+    // 关键开始标签：检测到 body 开始或第一个 div 容器时触发
+    if (oldLength > 0 && oldLength < 1000) {
+      // 检测 body 标签
+      const bodyStartTags = ['<body>', '<body '];
+      for (const tag of bodyStartTags) {
+        if (addedContent.includes(tag)) {
+          console.log(`[触发渲染] 检测到 body 开始标签`);
+          return true;
+        }
+      }
 
-    // 检查新增内容中是否包含关键闭合标签
-    for (const tag of keyClosingTags) {
-      if (addedContent.includes(tag)) {
+      // 检测第一个主容器 div（通常是 class="container" 或类似的）
+      // 这通常是 body 下的第一个重要元素
+      if (
+        addedContent.includes('<div class="container') ||
+        addedContent.includes('<div class="wrapper') ||
+        addedContent.includes('<div class="main') ||
+        addedContent.includes('<div id="app') ||
+        addedContent.includes('<div id="root')
+      ) {
+        console.log(`[触发渲染] 检测到主容器 div`);
         return true;
       }
     }
 
-    // 如果内容增长超过200个字符，也触发一次渲染（降低阈值）
-    if (newLength - oldLength > 200) {
+    // ⭐ 重要区块的闭合标签（只在这些标签时才触发，避免频繁更新）
+    const importantClosingTags = [
+      '</header>', // 头部区块完成
+      '</nav>', // 导航区块完成
+      '</section>', // 内容区块完成
+      '</main>', // 主内容区块完成
+      '</article>', // 文章区块完成
+      '</footer>', // 底部区块完成
+      '</aside>', // 侧边栏区块完成
+      '</body>', // body 完成
+      '</html>', // 整个文档完成
+    ];
+
+    // 检查新增内容中是否包含重要区块的闭合标签
+    for (const tag of importantClosingTags) {
+      if (addedContent.includes(tag)) {
+        console.log(`[触发渲染] 重要区块完成: ${tag}`);
+        return true;
+      }
+    }
+
+    // 特殊处理 </div>：如果内容增长超过 500 字符且遇到 </div>，则触发
+    // 这样可以捕获像 container 这样的外层 div 闭合，以及较大的内容区块
+    if (newLength - oldLength > 500 && addedContent.includes('</div>')) {
+      console.log(
+        `[触发渲染] 内容增长 ${newLength - oldLength} 字符，且检测到 </div>`,
+      );
+      return true;
+    }
+
+    // 如果内容增长超过 1000 个字符，也触发一次渲染
+    // 确保即使没有闭合标签，大量内容也能及时显示
+    if (newLength - oldLength > 1000) {
+      console.log(`[触发渲染] 内容增长超过1000字符: ${newLength - oldLength}`);
       return true;
     }
 
@@ -137,12 +175,28 @@ export class AIService {
       result = html.substring(0, lastOpenBracket);
     }
 
+    // 检查并闭合 style 标签
+    const styleOpenCount = (result.match(/<style[^>]*>/g) || []).length;
+    const styleCloseCount = (result.match(/<\/style>/g) || []).length;
+
+    for (let i = 0; i < styleOpenCount - styleCloseCount; i++) {
+      result += '\n</style>';
+    }
+
     // 检查并闭合 script 标签
     const scriptOpenCount = (result.match(/<script[^>]*>/g) || []).length;
     const scriptCloseCount = (result.match(/<\/script>/g) || []).length;
 
     for (let i = 0; i < scriptOpenCount - scriptCloseCount; i++) {
       result += '\n</script>';
+    }
+
+    // 检查并闭合 head 标签
+    const hasHeadOpen = /<head[^>]*>/i.test(result);
+    const hasHeadClose = /<\/head>/i.test(result);
+
+    if (hasHeadOpen && !hasHeadClose) {
+      result += '\n</head>';
     }
 
     // 检查并闭合 body 标签
@@ -159,6 +213,11 @@ export class AIService {
 
     if (hasHtmlOpen && !hasHtmlClose) {
       result += '\n</html>';
+    }
+
+    // 如果没有任何HTML结构，但有DOCTYPE，至少补全基本结构
+    if (result.includes('<!DOCTYPE') && !hasHtmlOpen) {
+      result += '\n<html>\n<body>\n</body>\n</html>';
     }
 
     return result;
@@ -370,7 +429,7 @@ export class AIService {
 
 重要：请直接输出优化后的 prompt 纯文本内容，不要使用任何代码块标记（如 \`\`\`），不要有任何多余的解释或说明文字，只输出优化后的 prompt 本身。`;
 
-    const content = `${systemPrompt}\n\nUser: ${userPrompt}\n\nAssistant:`;
+    const content = `${systemPrompt}\n\nUser: ${userPrompt}\n\nAssistant:<think>\n</think>`;
 
     // 构建 contents 数组：将优化请求重复 count 次
     const contents = Array.from({ length: count }, () => content);

@@ -81,7 +81,7 @@ export const ChatPage = () => {
   });
   const completedTaskCount = completedIndexes.size;
 
-  const batchSize = 3; // 每批渲染 3 个 iframe（减少渲染压力）
+  const batchSize = 4; // 每批渲染 4 个 iframe
   const isBatchProcessing = useRef(false); // 标记是否正在批处理中
   const resultsRef = useRef(results); // 存储最新的 results 引用
 
@@ -457,8 +457,39 @@ export const ChatPage = () => {
             updateBuffer.current.set(index, updateData);
             globalState.updateBuffer.set(index, updateData);
 
-            // 只有当该 index 的流式响应完全完成时，才标记为完成
-            if (isComplete) {
+            // 检测AI是否真正生成了闭合标签（检查原始 content，而不是补全后的 htmlCode）
+            // 这样可以区分"自动补全的标签"和"AI真正生成的标签"
+            const aiGeneratedClosingTag =
+              content.includes('</html>') || content.includes('</body>');
+
+            // 检测是否完成了重要区块（不包括最终的 body/html 闭合）
+            const importantBlockCompleted =
+              content.includes('</header>') ||
+              content.includes('</nav>') ||
+              content.includes('</section>') ||
+              content.includes('</main>') ||
+              content.includes('</article>') ||
+              content.includes('</footer>') ||
+              content.includes('</aside>');
+
+            // 检测HTML是否可以渲染（满足以下任一条件）：
+            // 1. AI 真正生成了闭合标签（说明完成了）
+            // 2. 完成了重要区块（说明至少有一个完整的内容区块）
+            // 3. htmlCode 有基本结构且长度足够（说明已经被 autoCompleteHTML 补全，并且有足够内容）
+            // 4. htmlCode 长度足够大（说明有大量内容可以渲染）
+            const hasBasicStructure =
+              htmlCode.includes('<body') && htmlCode.length > 500;
+            const hasEnoughContent = htmlCode.length > 1000;
+
+            const isReadyToRender =
+              aiGeneratedClosingTag ||
+              importantBlockCompleted ||
+              hasBasicStructure ||
+              hasEnoughContent;
+
+            // 标记为完成的条件（只有AI真正生成了闭合标签或 isComplete）：
+            // 这样可以让用户看到"X/24"的进度是真实完成的任务数
+            if (isComplete || aiGeneratedClosingTag) {
               setCompletedIndexes((prev) => {
                 const newSet = new Set(prev);
                 newSet.add(index);
@@ -466,14 +497,25 @@ export const ChatPage = () => {
               });
             }
 
-            // 使用节流：每 300ms 批量更新一次 UI 和 localStorage
-            if (updateTimeoutRef.current) {
-              clearTimeout(updateTimeoutRef.current);
-            }
-            updateTimeoutRef.current = setTimeout(() => {
+            // 立即渲染的条件：HTML已经可以显示了
+            if (isReadyToRender) {
+              // 立即渲染（不等节流），因为HTML已经可以显示了
+              if (updateTimeoutRef.current) {
+                clearTimeout(updateTimeoutRef.current);
+                updateTimeoutRef.current = null;
+              }
               flushUpdates();
-              updateSessionStorage(); // UI 更新后立即更新 localStorage
-            }, 300);
+              updateSessionStorage();
+            } else {
+              // 如果还不能渲染，使用节流：每 300ms 批量更新一次 UI 和 localStorage
+              if (updateTimeoutRef.current) {
+                clearTimeout(updateTimeoutRef.current);
+              }
+              updateTimeoutRef.current = setTimeout(() => {
+                flushUpdates();
+                updateSessionStorage(); // UI 更新后立即更新 localStorage
+              }, 300);
+            }
           },
           newAbortController,
         );
