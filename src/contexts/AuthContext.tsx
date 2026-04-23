@@ -1,10 +1,10 @@
 import { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
-
-interface AuthConfig {
-  apiUrl: string;
-  password: string;
-}
+import {
+  AUTH_STORAGE_KEY,
+  resolveAuthConfig,
+  type AuthConfig,
+} from '@/utils/authConfig';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -16,30 +16,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const STORAGE_KEY = 'rwkv_auth_config';
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [authConfig, setAuthConfig] = useState<AuthConfig | null>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  });
+  const [authConfig, setAuthConfig] = useState<AuthConfig | null>(() =>
+    resolveAuthConfig(),
+  );
 
   const login = (apiUrl: string, password: string) => {
     const config = { apiUrl, password };
     setAuthConfig(config);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(config));
   };
 
   const logout = () => {
-    setAuthConfig(null);
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    // 退出后重新解析：开发环境仍会回落到 .env，避免循环登录
+    setAuthConfig(resolveAuthConfig());
   };
 
   return (

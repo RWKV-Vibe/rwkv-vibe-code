@@ -33,5 +33,49 @@
     "streamNotAvailable": "ReadableStream は使用できません",
     "httpError": "HTTP {{status}} {{statusText}} {{text}}",
     "generationFailed": "生成に失敗しました"
+  },
+  "common": {
+    "close": "閉じる",
+    "cancel": "キャンセル"
+  },
+  "modelSettings": {
+    "title": "モデル設定",
+    "description": "生成に使うサンプリングパラメータを調整します。設定はブラウザに保存され、次回の生成から有効になります。",
+    "reset": "既定値に戻す",
+    "save": "保存",
+    "fields": {
+      "temperature": {
+        "label": "Temperature",
+        "hint": "サンプリング温度。高いほどランダム。目安 0.6〜1.2。"
+      },
+      "top_k": {
+        "label": "Top-K",
+        "hint": "確率上位 K 個から選択。0 で無効。"
+      },
+      "top_p": {
+        "label": "Top-P",
+        "hint": "核サンプリングの閾値。小さいほど保守的。"
+      },
+      "max_tokens": {
+        "label": "Max Tokens",
+        "hint": "一度に生成する最大トークン数。長いページには 4096 以上推奨。"
+      },
+      "alpha_presence": {
+        "label": "Presence Penalty",
+        "hint": "既出トークンへの一回分のペナルティ。繰り返しを抑制。"
+      },
+      "alpha_frequency": {
+        "label": "Frequency Penalty",
+        "hint": "出現頻度に応じて加算されるペナルティ。"
+      },
+      "alpha_decay": {
+        "label": "Penalty Decay",
+        "hint": "ペナルティの減衰係数。1 に近いほど減衰が遅い。"
+      },
+      "chunk_size": {
+        "label": "Chunk Size",
+        "hint": "サーバー側のバッチサイズ。大きいほど高速だが VRAM 使用量も増加。"
+      }
+    }
   }
 }

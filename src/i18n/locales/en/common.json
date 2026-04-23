@@ -33,5 +33,49 @@
     "streamNotAvailable": "ReadableStream not available",
     "httpError": "HTTP {{status}} {{statusText}} {{text}}",
     "generationFailed": "Generation failed"
+  },
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel"
+  },
+  "modelSettings": {
+    "title": "Model Settings",
+    "description": "Tune the sampling parameters used for generation. Settings are saved locally and applied to the next run.",
+    "reset": "Reset to defaults",
+    "save": "Save",
+    "fields": {
+      "temperature": {
+        "label": "Temperature",
+        "hint": "Sampling temperature. Higher is more random. Typical 0.6 – 1.2."
+      },
+      "top_k": {
+        "label": "Top-K",
+        "hint": "Sample only from the K most likely tokens. 0 disables it."
+      },
+      "top_p": {
+        "label": "Top-P",
+        "hint": "Nucleus sampling threshold. Lower = more conservative output."
+      },
+      "max_tokens": {
+        "label": "Max Tokens",
+        "hint": "Max tokens to generate per response. 4096+ recommended for long pages."
+      },
+      "alpha_presence": {
+        "label": "Presence Penalty",
+        "hint": "One-shot penalty for tokens already used, reduces repetition."
+      },
+      "alpha_frequency": {
+        "label": "Frequency Penalty",
+        "hint": "Penalty that grows with token frequency. Suppresses repeated words."
+      },
+      "alpha_decay": {
+        "label": "Penalty Decay",
+        "hint": "Decay factor for penalties. Closer to 1 decays slower."
+      },
+      "chunk_size": {
+        "label": "Chunk Size",
+        "hint": "Server-side batch size. Larger = higher throughput, more VRAM."
+      }
+    }
   }
 }

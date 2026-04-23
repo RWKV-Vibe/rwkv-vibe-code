@@ -4,7 +4,8 @@ import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
 import { MarkdownRenderer } from '@/components/business/MarkdownRenderer';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { PromptOptimizeDialog } from '@/components/business/PromptOptimizeDialog';
-import { Loader2, Wand2, Square, Check, Home } from 'lucide-react';
+import { ModelSettingsDialog } from '@/components/business/ModelSettingsDialog';
+import { Loader2, Wand2, Square, Check, Home, Settings } from 'lucide-react';
 import { AIService } from '@/service/ai';
 import { useTranslation } from 'react-i18next';
 
@@ -696,6 +697,7 @@ export const ChatPage = () => {
 
   // Prompt 优化相关状态
   const [isOptimizeDialogOpen, setIsOptimizeDialogOpen] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
 
   // 打开优化 Dialog
   const handleOpenOptimizeDialog = useCallback(() => {
@@ -706,6 +708,9 @@ export const ChatPage = () => {
   const handleCloseOptimizeDialog = useCallback(() => {
     setIsOptimizeDialogOpen(false);
   }, []);
+
+  const handleOpenSettings = useCallback(() => setIsSettingsDialogOpen(true), []);
+  const handleCloseSettings = useCallback(() => setIsSettingsDialogOpen(false), []);
 
   // 使用优化后的 Prompt
   const handleUseOptimizedPrompt = useCallback((optimizedPrompt: string) => {
@@ -827,8 +832,23 @@ export const ChatPage = () => {
         </button>
       </div>
 
-      {/* Language Switcher - 右上角 */}
-      <div className="fixed top-6 right-6 z-50">
+      {/* 右上角按钮组：设置 + 语言切换 */}
+      <div className="fixed top-6 right-6 z-50 flex items-center gap-4">
+        <button
+          onClick={handleOpenSettings}
+          className="flex items-center justify-center h-[104px] w-[104px] rounded-3xl
+                     bg-white dark:bg-gray-800
+                     hover:bg-gray-50 dark:hover:bg-gray-700
+                     text-gray-900 dark:text-white
+                     shadow-2xl hover:shadow-3xl
+                     transition-all duration-200 hover:scale-105
+                     border-4 border-gray-200 dark:border-gray-600
+                     hover:border-gray-300 dark:hover:border-gray-500"
+          title={t('modelSettings.title')}
+          aria-label={t('modelSettings.title')}
+        >
+          <Settings className="h-14 w-14" />
+        </button>
         <LanguageSwitcher />
       </div>
 
@@ -838,6 +858,12 @@ export const ChatPage = () => {
         initialPrompt={inputRef.current?.value || initialPrompt}
         onClose={handleCloseOptimizeDialog}
         onUsePrompt={handleUseOptimizedPrompt}
+      />
+
+      {/* 模型参数设置 Dialog */}
+      <ModelSettingsDialog
+        isOpen={isSettingsDialogOpen}
+        onClose={handleCloseSettings}
       />
 
       {/* 顶部：输入区域 */}

@@ -33,5 +33,49 @@
     "streamNotAvailable": "ReadableStream 不可用",
     "httpError": "HTTP {{status}} {{statusText}} {{text}}",
     "generationFailed": "生成失败"
+  },
+  "common": {
+    "close": "关闭",
+    "cancel": "取消"
+  },
+  "modelSettings": {
+    "title": "模型参数设置",
+    "description": "调整生成时使用的采样参数。参数会保存在本地浏览器，下次生成自动生效。",
+    "reset": "恢复默认",
+    "save": "保存",
+    "fields": {
+      "temperature": {
+        "label": "Temperature",
+        "hint": "采样温度，值越高输出越随机。常用 0.6 ~ 1.2。"
+      },
+      "top_k": {
+        "label": "Top-K",
+        "hint": "仅在概率最高的 K 个候选中采样，0 表示不启用。"
+      },
+      "top_p": {
+        "label": "Top-P",
+        "hint": "核采样阈值，值越小输出越保守稳定。"
+      },
+      "max_tokens": {
+        "label": "Max Tokens",
+        "hint": "单次生成的最大 token 数，长网页建议 4096 以上。"
+      },
+      "alpha_presence": {
+        "label": "Presence Penalty",
+        "hint": "已出现 token 的一次性惩罚，减少重复。"
+      },
+      "alpha_frequency": {
+        "label": "Frequency Penalty",
+        "hint": "按出现频次累加的惩罚，抑制高频重复词。"
+      },
+      "alpha_decay": {
+        "label": "Penalty Decay",
+        "hint": "惩罚衰减系数，越接近 1 衰减越慢。"
+      },
+      "chunk_size": {
+        "label": "Chunk Size",
+        "hint": "服务端批处理大小，越大吞吐越高，显存占用也越高。"
+      }
+    }
   }
 }

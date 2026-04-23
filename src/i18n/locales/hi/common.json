@@ -33,5 +33,49 @@
     "streamNotAvailable": "ReadableStream उपलब्ध नहीं है",
     "httpError": "HTTP {{status}} {{statusText}} {{text}}",
     "generationFailed": "जनरेशन विफल"
+  },
+  "common": {
+    "close": "बंद करें",
+    "cancel": "रद्द करें"
+  },
+  "modelSettings": {
+    "title": "मॉडल सेटिंग्स",
+    "description": "जनरेशन में उपयोग किए जाने वाले सैंपलिंग पैरामीटर को समायोजित करें। सेटिंग्स स्थानीय रूप से सहेजी जाती हैं और अगली रन में लागू होती हैं।",
+    "reset": "डिफ़ॉल्ट पर रीसेट करें",
+    "save": "सहेजें",
+    "fields": {
+      "temperature": {
+        "label": "Temperature",
+        "hint": "सैंपलिंग तापमान। अधिक होने पर आउटपुट अधिक रैंडम। सामान्य 0.6 – 1.2।"
+      },
+      "top_k": {
+        "label": "Top-K",
+        "hint": "केवल शीर्ष K टोकन से सैंपल करें। 0 इसे अक्षम करता है।"
+      },
+      "top_p": {
+        "label": "Top-P",
+        "hint": "न्यूक्लियस सैंपलिंग थ्रेशोल्ड। कम = अधिक रूढ़िवादी आउटपुट।"
+      },
+      "max_tokens": {
+        "label": "Max Tokens",
+        "hint": "प्रति रिस्पॉन्स अधिकतम टोकन। लंबे पेजों के लिए 4096+ अनुशंसित।"
+      },
+      "alpha_presence": {
+        "label": "Presence Penalty",
+        "hint": "पहले से उपयोग किए गए टोकन पर एक-बार की पेनल्टी।"
+      },
+      "alpha_frequency": {
+        "label": "Frequency Penalty",
+        "hint": "टोकन की आवृत्ति के साथ बढ़ने वाली पेनल्टी।"
+      },
+      "alpha_decay": {
+        "label": "Penalty Decay",
+        "hint": "पेनल्टी के लिए क्षय कारक। 1 के निकट धीमा क्षय।"
+      },
+      "chunk_size": {
+        "label": "Chunk Size",
+        "hint": "सर्वर-साइड बैच आकार। बड़ा = अधिक थ्रूपुट, अधिक VRAM।"
+      }
+    }
   }
 }

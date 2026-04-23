@@ -12,6 +12,10 @@ declare module '*.svg?react' {
 
 interface ImportMetaEnv {
   readonly PUBLIC_RWKV_API_URL: string;
+  readonly PUBLIC_RWKV_API_PASSWORD?: string;
+  readonly DEV: boolean;
+  readonly PROD: boolean;
+  readonly MODE: string;
 }
 
 interface ImportMeta {

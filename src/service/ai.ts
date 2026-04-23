@@ -1,4 +1,6 @@
 import i18n from '../i18n';
+import { resolveAuthConfig, type AuthConfig } from '@/utils/authConfig';
+import { loadModelSettings } from '@/utils/modelSettings';
 
 interface StreamChunk {
   object: string;
@@ -10,28 +12,9 @@ interface StreamChunk {
   }[];
 }
 
-interface AuthConfig {
-  apiUrl: string;
-  password: string;
-}
-
-const STORAGE_KEY = 'rwkv_auth_config';
-
-// 获取认证配置
+// 获取认证配置：开发环境优先 .env，生产环境优先 localStorage
 const getAuthConfig = (): AuthConfig => {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch {
-      // ignore
-    }
-  }
-  // 回退到环境变量
-  return {
-    apiUrl: import.meta.env.PUBLIC_RWKV_API_URL || '',
-    password: '',
-  };
+  return resolveAuthConfig() ?? { apiUrl: '', password: '' };
 };
 
 export class AIService {
@@ -257,20 +240,21 @@ export class AIService {
 
     try {
       const authConfig = getAuthConfig();
+      const settings = loadModelSettings();
       const response = await fetch(authConfig.apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: contents,
-          max_tokens: 8192,
-          temperature: 1.0,
-          top_k: 1,
-          top_p: 0.3,
+          max_tokens: settings.max_tokens,
+          temperature: settings.temperature,
+          top_k: settings.top_k,
+          top_p: settings.top_p,
           pad_zero: true,
-          alpha_presence: 0.5,
-          alpha_frequency: 0.5,
-          alpha_decay: 0.996,
-          chunk_size: 128,
+          alpha_presence: settings.alpha_presence,
+          alpha_frequency: settings.alpha_frequency,
+          alpha_decay: settings.alpha_decay,
+          chunk_size: settings.chunk_size,
           stream: true,
           password: authConfig.password,
         }),
