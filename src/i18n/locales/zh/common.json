@@ -15,7 +15,8 @@
     "inputPlaceholder": "描述你想要创建的网页...",
     "generating": "生成中...",
     "preparingRender": "准备渲染预览...",
-    "generationFailed": "生成失败"
+    "generationFailed": "生成失败",
+    "layoutMode": "布局"
   },
   "detailpage": {
     "back": "返回",

@@ -15,7 +15,8 @@
     "inputPlaceholder": "जिस वेबपेज को आप बनाना चाहते हैं, उसका वर्णन करें...",
     "generating": "जनरेट हो रहा है...",
     "preparingRender": "प्रीव्यू तैयार किया जा रहा है...",
-    "generationFailed": "जनरेशन विफल"
+    "generationFailed": "जनरेशन विफल",
+    "layoutMode": "लेआउट"
   },
   "detailpage": {
     "back": "वापस",

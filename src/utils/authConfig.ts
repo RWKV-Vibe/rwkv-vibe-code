@@ -1,3 +1,5 @@
+import { normalizeApiUrlWithPort } from '@/utils/authValidation';
+
 export interface AuthConfig {
   apiUrl: string;
   password: string;
@@ -6,7 +8,8 @@ export interface AuthConfig {
 export const AUTH_STORAGE_KEY = 'rwkv_auth_config';
 
 const getEnvConfig = (): AuthConfig | null => {
-  const apiUrl = import.meta.env.PUBLIC_RWKV_API_URL?.trim() || '';
+  const rawApiUrl = import.meta.env.PUBLIC_RWKV_API_URL?.trim() || '';
+  const apiUrl = normalizeApiUrlWithPort(rawApiUrl);
   if (!apiUrl) return null;
   return {
     apiUrl,
@@ -19,10 +22,21 @@ const getStorageConfig = (): AuthConfig | null => {
   const saved = localStorage.getItem(AUTH_STORAGE_KEY);
   if (!saved) return null;
   try {
-    const parsed = JSON.parse(saved) as AuthConfig;
-    if (!parsed?.apiUrl) return null;
-    return parsed;
+    const parsed = JSON.parse(saved) as Partial<AuthConfig> | null;
+    if (!parsed || typeof parsed.apiUrl !== 'string') return null;
+
+    const normalizedApiUrl = normalizeApiUrlWithPort(parsed.apiUrl);
+    if (!normalizedApiUrl) {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      return null;
+    }
+
+    return {
+      apiUrl: normalizedApiUrl,
+      password: typeof parsed.password === 'string' ? parsed.password.trim() : '',
+    };
   } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
     return null;
   }
 };

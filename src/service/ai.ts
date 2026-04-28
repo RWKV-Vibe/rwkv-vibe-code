@@ -424,15 +424,20 @@ export class AIService {
 
     try {
       const authConfig = getAuthConfig();
+      const settings = loadModelSettings();
       const response = await fetch(authConfig.apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: contents,
-          max_tokens: 2048,
-          temperature: 0.8,
-          top_k: 1,
-          top_p: 0.5,
+          max_tokens: settings.max_tokens,
+          temperature: settings.temperature,
+          top_k: settings.top_k,
+          top_p: settings.top_p,
+          chunk_size: settings.chunk_size,
+          alpha_presence: settings.alpha_presence,
+          alpha_frequency: settings.alpha_frequency,
+          alpha_decay: settings.alpha_decay,
           stream: true,
           enable_think: false,
           password: authConfig.password,

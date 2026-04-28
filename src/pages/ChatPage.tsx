@@ -55,10 +55,28 @@ export const ChatPage = () => {
     [initialMessage],
   );
   const totalCount = 24;
+  type LayoutMode = '12x2' | '8x3' | '6x4';
+  const layoutModes: LayoutMode[] = ['12x2', '8x3', '6x4'];
+  const layoutModeConfig: Record<LayoutMode, { columns: number }> = {
+    '12x2': { columns: 12 },
+    '8x3': { columns: 8 },
+    '6x4': { columns: 6 },
+  };
+  const layoutStorageKey = 'chatPageLayoutMode';
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => {
+    const saved = localStorage.getItem(layoutStorageKey);
+    return saved === '8x3' || saved === '6x4' || saved === '12x2'
+      ? saved
+      : '8x3';
+  });
 
   // Token 速率计算相关状态
   const [tokenRate, setTokenRate] = useState<number>(0);
   const [totalTokens, setTotalTokens] = useState<number>(0);
+
+  useEffect(() => {
+    localStorage.setItem(layoutStorageKey, layoutMode);
+  }, [layoutMode]);
 
   // 计算已完成的任务数（使用 Set 追踪已完成的索引）
   const [completedIndexes, setCompletedIndexes] = useState<Set<number>>(() => {
@@ -833,7 +851,28 @@ export const ChatPage = () => {
       </div>
 
       {/* 右上角按钮组：设置 + 语言切换 */}
-      <div className="fixed top-6 right-6 z-50 flex items-center gap-4">
+      <div className="fixed top-6 right-6 z-50 flex items-center justify-end gap-4 flex-wrap max-w-[95vw]">
+        <div
+          className="flex items-center gap-2 rounded-3xl px-4 py-4
+                     bg-white dark:bg-gray-800
+                     border-4 border-gray-200 dark:border-gray-600
+                     shadow-2xl"
+        >
+          {layoutModes.map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setLayoutMode(mode)}
+              className={`px-6 py-4 rounded-2xl text-2xl font-bold transition-all duration-200 border-2 ${
+                layoutMode === mode
+                  ? 'bg-blue-600 dark:bg-blue-500 text-white border-blue-500 dark:border-blue-400 shadow-lg'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+              title={`${t('chatpage.layoutMode')}: ${mode}`}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
         <button
           onClick={handleOpenSettings}
           className="flex items-center justify-center h-[104px] w-[104px] rounded-3xl
@@ -974,8 +1013,10 @@ export const ChatPage = () => {
           </div>
         ) : (
           <div
-            className="grid grid-cols-12 gap-4 mx-auto"
-            style={{ maxWidth: '12000px' }}
+            className="grid w-full gap-4"
+            style={{
+              gridTemplateColumns: `repeat(${layoutModeConfig[layoutMode].columns}, minmax(0, 1fr))`,
+            }}
           >
             {results.map((result, index) => (
               <div

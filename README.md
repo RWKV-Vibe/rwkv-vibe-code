@@ -51,7 +51,7 @@ docker compose up --build -d
 在项目根目录下创建一个 `.env` 文件，并添加以下内容：
 
 ```bash
-PUBLIC_RWKV_API_URL=http://192.168.0.82:8000/v1/chat/completions
+PUBLIC_RWKV_API_URL=http://192.168.0.12:8000/v1/chat/completions
 ```
 
 > ⚠️ 注意：

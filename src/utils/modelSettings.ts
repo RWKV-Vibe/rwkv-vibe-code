@@ -11,12 +11,12 @@ export interface ModelSettings {
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   temperature: 1.0,
-  top_k: 1,
-  top_p: 0.3,
+  top_k: 60,
+  top_p: 0.5,
   max_tokens: 8192,
-  alpha_presence: 0.5,
-  alpha_frequency: 0.5,
-  alpha_decay: 0.996,
+  alpha_presence: 1.0,
+  alpha_frequency: 0.1,
+  alpha_decay: 0.99,
   chunk_size: 128,
 };
 

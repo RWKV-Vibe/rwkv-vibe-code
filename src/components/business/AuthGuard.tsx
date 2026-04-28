@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Server, Lock, Eye, EyeOff } from 'lucide-react';
+import { validateAuthInput } from '@/utils/authValidation';
 
 export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, login } = useAuth();
@@ -11,24 +12,15 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
-    if (!apiUrl.trim()) {
-      setError('请输入 API 地址');
+    const validation = validateAuthInput(apiUrl, password);
+    if (!validation.ok) {
+      setError(validation.error);
       return;
     }
 
-    if (!password.trim()) {
-      setError('请输入密码');
-      return;
-    }
-
-    // 如果没有协议前缀，自动添加 http://
-    let finalUrl = apiUrl.trim();
-    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-      finalUrl = 'http://' + finalUrl;
-    }
-
-    login(finalUrl, password.trim());
+    login(validation.normalizedUrl, validation.password);
   };
 
   if (isAuthenticated) {
@@ -68,7 +60,7 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
             {/* API 地址输入 */}
             <div>
               <label className="block text-3xl font-semibold text-white mb-4">
-                API 地址
+                API 完整地址
               </label>
               <div className="relative">
                 <Server className="absolute left-8 top-1/2 -translate-y-1/2 w-10 h-10 text-gray-400" />
@@ -79,7 +71,7 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
                     setApiUrl(e.target.value);
                     setError('');
                   }}
-                  placeholder="192.168.0.82:8001/v1/chat/completions"
+                  placeholder="http://192.168.0.12:8000/v1/chat/completions"
                   className="w-full pl-24 pr-8 py-8 bg-white/10 border-2 border-white/30 rounded-2xl
                              text-3xl text-white placeholder-gray-500
                              focus:border-purple-400 focus:outline-none focus:ring-4 focus:ring-purple-500/30
@@ -87,7 +79,7 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
                 />
               </div>
               <p className="mt-3 text-lg text-gray-400">
-                💡 无需输入 http://，系统会自动添加
+                请输入完整 URL（含 http/https、端口和接口路径）
               </p>
             </div>
 

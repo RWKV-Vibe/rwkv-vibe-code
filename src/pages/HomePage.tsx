@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { useAuth } from '@/contexts/AuthContext';
 import { Trash2 } from 'lucide-react';
+import { clearAppCache, clearChatPageCache } from '@/utils/storage';
 
 export const HomePage = () => {
   const navigate = useNavigate();
@@ -28,10 +29,7 @@ export const HomePage = () => {
 
   const handleSubmit = (content: string) => {
     if (content.trim()) {
-      // 清除 localStorage 缓存（ChatPage 现在使用 localStorage）
-      localStorage.removeItem('chatPageResults');
-      localStorage.removeItem('chatPagePrompt');
-      localStorage.removeItem('hasProcessedInitialMessage');
+      clearChatPageCache();
 
       navigate('/chat', { state: { initialMessage: content } });
       setInputValue('');
@@ -39,15 +37,17 @@ export const HomePage = () => {
   };
 
   const handleClearCache = () => {
-    if (confirm('确定要清除所有缓存吗？这将退出登录并清除所有本地数据。')) {
-      // 清除认证信息
+    if (
+      confirm(
+        '确定要清除本地缓存吗？这将清除登录信息、聊天记录和模型参数设置。',
+      )
+    ) {
+      clearAppCache({
+        includeAuth: true,
+        includeModelSettings: true,
+        includeSessionStorage: true,
+      });
       logout();
-      // 清除其他缓存（ChatPage 使用 localStorage）
-      localStorage.removeItem('chatPageResults');
-      localStorage.removeItem('chatPagePrompt');
-      localStorage.removeItem('hasProcessedInitialMessage');
-      sessionStorage.clear();
-      // 页面会自动重定向到登录页面
     }
   };
 
@@ -58,14 +58,15 @@ export const HomePage = () => {
         {/* 清除缓存按钮 */}
         <button
           onClick={handleClearCache}
-          className="flex items-center justify-center h-16 w-16 rounded-full
+          className="flex items-center justify-center gap-2 h-16 px-6 rounded-2xl
                      bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600
-                     text-white shadow-lg hover:shadow-xl
+                     text-white text-lg font-semibold shadow-lg hover:shadow-xl
                      transition-all duration-200 hover:scale-105
                      border-2 border-red-400 dark:border-red-400"
-          title="清除缓存"
+          title="清除本地缓存"
         >
           <Trash2 className="h-6 w-6" />
+          <span>清除本地缓存</span>
         </button>
 
         {/* 语言切换器 */}

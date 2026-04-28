@@ -15,7 +15,8 @@
     "inputPlaceholder": "Describe the webpage you want to create...",
     "generating": "Generating...",
     "preparingRender": "Preparing preview...",
-    "generationFailed": "Generation failed"
+    "generationFailed": "Generation failed",
+    "layoutMode": "Layout"
   },
   "detailpage": {
     "back": "Back",

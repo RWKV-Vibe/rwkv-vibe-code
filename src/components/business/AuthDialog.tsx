@@ -1,5 +1,6 @@
 import { useState, useCallback, memo } from 'react';
 import { Server, Key, LogIn, Eye, EyeOff } from 'lucide-react';
+import { validateAuthInput } from '@/utils/authValidation';
 
 interface AuthDialogProps {
   onSubmit: (apiUrl: string, password: string) => void;
@@ -16,23 +17,13 @@ export const AuthDialog = memo(({ onSubmit }: AuthDialogProps) => {
       e.preventDefault();
       setError('');
 
-      if (!apiUrl.trim()) {
-        setError('请输入 API 地址');
+      const validation = validateAuthInput(apiUrl, password);
+      if (!validation.ok) {
+        setError(validation.error);
         return;
       }
 
-      if (!password.trim()) {
-        setError('请输入密码');
-        return;
-      }
-
-      // 如果没有协议前缀，自动添加 http://
-      let finalUrl = apiUrl.trim();
-      if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-        finalUrl = 'http://' + finalUrl;
-      }
-
-      onSubmit(finalUrl, password.trim());
+      onSubmit(validation.normalizedUrl, validation.password);
     },
     [apiUrl, password, onSubmit],
   );
@@ -65,7 +56,7 @@ export const AuthDialog = memo(({ onSubmit }: AuthDialogProps) => {
           {/* API URL 输入 */}
           <div>
             <label className="block text-3xl font-semibold text-white mb-4">
-              API 地址
+              API 完整地址
             </label>
             <div className="relative">
               <Server className="absolute left-8 top-1/2 -translate-y-1/2 h-10 w-10 text-gray-400" />
@@ -76,7 +67,7 @@ export const AuthDialog = memo(({ onSubmit }: AuthDialogProps) => {
                   setApiUrl(e.target.value);
                   setError('');
                 }}
-                placeholder="192.168.0.82:8001/v1/chat/completions"
+                placeholder="http://192.168.0.12:8000/v1/chat/completions"
                 className="w-full pl-24 pr-8 py-8 bg-white/10 border-2 border-white/30 rounded-2xl
                            text-white text-3xl placeholder:text-gray-500
                            focus:border-purple-400 focus:outline-none focus:ring-4 focus:ring-purple-500/30
@@ -84,7 +75,7 @@ export const AuthDialog = memo(({ onSubmit }: AuthDialogProps) => {
               />
             </div>
             <p className="mt-3 text-lg text-gray-400">
-              💡 无需输入 http://，系统会自动添加
+              请输入完整 URL（含 http/https、端口和接口路径）
             </p>
           </div>
 

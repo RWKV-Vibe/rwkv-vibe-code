@@ -15,7 +15,8 @@
     "inputPlaceholder": "作りたいWebページを説明してください...",
     "generating": "生成中...",
     "preparingRender": "プレビューを準備中...",
-    "generationFailed": "生成に失敗しました"
+    "generationFailed": "生成に失敗しました",
+    "layoutMode": "レイアウト"
   },
   "detailpage": {
     "back": "戻る",

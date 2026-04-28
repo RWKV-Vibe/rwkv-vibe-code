@@ -5,6 +5,7 @@ import {
   resolveAuthConfig,
   type AuthConfig,
 } from '@/utils/authConfig';
+import { normalizeApiUrlWithPort } from '@/utils/authValidation';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -22,7 +23,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const login = (apiUrl: string, password: string) => {
-    const config = { apiUrl, password };
+    const normalizedApiUrl = normalizeApiUrlWithPort(apiUrl);
+    if (!normalizedApiUrl) {
+      return;
+    }
+
+    const config = { apiUrl: normalizedApiUrl, password: password.trim() };
     setAuthConfig(config);
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(config));
   };
