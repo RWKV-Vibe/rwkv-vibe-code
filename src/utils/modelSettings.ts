@@ -46,10 +46,10 @@ export const MODEL_SETTINGS_META: SettingMeta[] = [
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
 
-const sanitize = (raw: Partial<Record<string, unknown>>): ModelSettings => {
+const sanitize = (raw: Partial<ModelSettings>): ModelSettings => {
   const out = { ...DEFAULT_MODEL_SETTINGS };
   for (const meta of MODEL_SETTINGS_META) {
-    const value = raw?.[meta.key];
+    const value = raw[meta.key];
     if (typeof value === 'number' && Number.isFinite(value)) {
       const v = meta.integer ? Math.round(value) : value;
       out[meta.key] = clamp(v, meta.min, meta.max);
@@ -63,7 +63,7 @@ export const loadModelSettings = (): ModelSettings => {
   try {
     const raw = localStorage.getItem(MODEL_SETTINGS_STORAGE_KEY);
     if (!raw) return { ...DEFAULT_MODEL_SETTINGS };
-    return sanitize(JSON.parse(raw) ?? {});
+    return sanitize((JSON.parse(raw) ?? {}) as Partial<ModelSettings>);
   } catch {
     return { ...DEFAULT_MODEL_SETTINGS };
   }

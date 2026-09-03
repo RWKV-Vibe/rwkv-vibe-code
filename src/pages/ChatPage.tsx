@@ -122,8 +122,10 @@ export const ChatPage = () => {
   const updateBuffer = useRef<
     Map<number, { content: string; htmlCode: string }>
   >(globalState.updateBuffer);
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const localStorageUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const localStorageUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   // 组件挂载时恢复全局状态
   useEffect(() => {

@@ -225,7 +225,7 @@ export class AIService {
     const contents = Array.from(
       { length: count },
       () =>
-        `User: ${i18n.t('aiService.promptPrefix')} ${userMessage}\n\nAssistant: <think`, // 这个 <think 是我们使用的特定LLM的必要的模板标志
+        `User: ${i18n.t('aiService.promptPrefix')} ${userMessage}\n\nAssistant: <think></think`,
     );
 
     // 存储每个 index 的累积内容
@@ -256,6 +256,7 @@ export class AIService {
           alpha_decay: settings.alpha_decay,
           chunk_size: settings.chunk_size,
           stream: true,
+          enable_think: false,
           password: authConfig.password,
         }),
         signal: controller.signal,
