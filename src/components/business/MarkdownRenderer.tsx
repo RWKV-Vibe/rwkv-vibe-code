@@ -1,3 +1,6 @@
+'use client';
+
+import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
@@ -7,15 +10,18 @@ interface MarkdownRendererProps {
   content: string;
 }
 
-export const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
+export const MarkdownRenderer = memo(function MarkdownRenderer({
+  content,
+}: MarkdownRendererProps) {
   return (
     <div className="markdown-body prose prose-sm max-w-none dark:prose-invert bg-white dark:bg-transparent text-gray-900 dark:text-gray-200">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
         components={{
-          code({ inline, className, children, ...props }: any) {
-            return inline ? (
+          code({ className, children, ...props }) {
+            const isInline = !className;
+            return isInline ? (
               <code
                 className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md text-sm font-mono border border-blue-200 dark:border-blue-800"
                 {...props}
@@ -175,4 +181,4 @@ export const MarkdownRenderer = ({ content }: MarkdownRendererProps) => {
       </ReactMarkdown>
     </div>
   );
-};
+});

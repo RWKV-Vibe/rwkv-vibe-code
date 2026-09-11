@@ -2,6 +2,9 @@
   "homepage": {
     "title": "你想创建什么？",
     "inputPlaceholder": "描述你的想法...",
+    "clearCache": "清除本地缓存",
+    "clearCacheTitle": "清除本地缓存",
+    "clearCacheConfirm": "确定要清除本地缓存吗？这将清除登录信息、聊天记录和模型参数设置。",
     "suggestions": {
       "hotel": "生成深圳的酒店页面，绿色主题",
       "museum": "创建一个鲁迅纪念馆网站，整体采用羊皮卷配色，包含生平介绍、文学作品展示和历史照片画廊",
@@ -16,7 +19,13 @@
     "generating": "生成中...",
     "preparingRender": "准备渲染预览...",
     "generationFailed": "生成失败",
-    "layoutMode": "布局"
+    "layoutMode": "布局",
+    "backToHome": "返回首页",
+    "selectPrompt": "选择一个预设模板开始",
+    "optimizePrompt": "优化 Prompt",
+    "stopGenerate": "终止生成",
+    "tokenRate": "{{rate}} tok/s",
+    "totalTokens": "总计: {{count}} tokens"
   },
   "detailpage": {
     "back": "返回",
@@ -27,17 +36,46 @@
     "codeEditor": "HTML 代码编辑器",
     "preview": "实时预览",
     "updateRealtime": "编辑代码实时更新",
-    "copyFailed": "复制失败"
+    "copyFailed": "复制失败",
+    "liveUpdating": "实时更新中",
+    "editMode": "编辑模式"
   },
   "aiService": {
-    "promptPrefix": "用 HTML",
+    "promptPrefix": "用 HTML 和 Tailwind CSS CDN 写一个完整精美、可直接打开的单页网站。必须包含：顶部导航、带大标题和真实文案的主视觉区、至少三个内容区块（图文介绍/特色卡片/数据或列表）、页脚；用 Unsplash 真实照片填满页面，排版精致、配色统一。禁止纯色或渐变空页，禁止半截代码。直接输出从 <!DOCTYPE html> 到 </html> 的完整代码，不要解释。需求：",
     "streamNotAvailable": "ReadableStream 不可用",
     "httpError": "HTTP {{status}} {{statusText}} {{text}}",
     "generationFailed": "生成失败"
   },
   "common": {
     "close": "关闭",
-    "cancel": "取消"
+    "cancel": "取消",
+    "send": "发送"
+  },
+  "auth": {
+    "title": "RWKV Vibe Code",
+    "subtitle": "请输入服务器配置以继续",
+    "apiLabel": "API 完整地址",
+    "apiPlaceholder": "http://192.168.0.12:8000/v1/chat/completions",
+    "apiHint": "请输入完整 URL（含 http/https、端口和接口路径）",
+    "passwordLabel": "密码",
+    "passwordPlaceholder": "请输入密码",
+    "submit": "连接服务器",
+    "persistHint": "配置将永久保存在本地浏览器，请确保使用安全的网络环境"
+  },
+  "promptOptimize": {
+    "title": "优化 Prompt",
+    "inputLabel": "输入你的需求：",
+    "generating": "正在生成 {{running}}/{{total}}",
+    "completed": "已完成 {{completed}}/{{total}}",
+    "stop": "终止生成",
+    "generate": "生成优化",
+    "generatingButton": "生成中...",
+    "empty": "点击“生成优化”按钮开始优化...",
+    "copy": "复制此 Prompt",
+    "useThis": "点击使用此 Prompt",
+    "resultsLabel": "优化后的 Prompt（选择一个使用）：",
+    "close": "关闭",
+    "placeholder": "输入你想要创建的网页需求..."
   },
   "modelSettings": {
     "title": "模型参数设置",

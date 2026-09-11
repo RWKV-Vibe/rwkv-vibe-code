@@ -3,12 +3,11 @@
 *.local
 *.log*
 
-# Dist
+# Dependencies & build
 node_modules
 dist/
-
-# Profile
-.rspack-profile-*/
+out/
+.next/
 
 # IDE
 .vscode/*

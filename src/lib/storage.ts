@@ -1,5 +1,5 @@
-import { AUTH_STORAGE_KEY } from '@/utils/authConfig';
-import { MODEL_SETTINGS_STORAGE_KEY } from '@/utils/modelSettings';
+import { AUTH_STORAGE_KEY } from '@/lib/auth-config';
+import { MODEL_SETTINGS_STORAGE_KEY } from '@/lib/model-settings';
 
 export const CHAT_PAGE_RESULTS_KEY = 'chatPageResults';
 export const CHAT_PAGE_PROMPT_KEY = 'chatPagePrompt';

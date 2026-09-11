@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@source "../../src/**/*.{js,ts,jsx,tsx}";
 
 @layer base {
   :root {
@@ -70,17 +71,15 @@
       'calt' 1;
   }
 
-  /* 隐藏滚动条但保持滚动功能 */
   .custom-scrollbar {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 
   .custom-scrollbar::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
+    display: none;
   }
 
-  /* 美化编辑器和预览区域滚动条 */
   .styled-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
@@ -105,7 +104,6 @@
     background-color: rgba(155, 155, 155, 0.7);
   }
 
-  /* Markdown 样式优化 */
   .markdown-body {
     line-height: 1.6;
   }
@@ -132,7 +130,6 @@
     background: transparent;
   }
 
-  /* 代码块专用滚动条样式 - WebKit */
   .markdown-body pre::-webkit-scrollbar {
     width: 4px;
     height: 4px;

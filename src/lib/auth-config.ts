@@ -1,4 +1,4 @@
-import { normalizeApiUrlWithPort } from '@/utils/authValidation';
+import { normalizeApiUrlWithPort } from '@/lib/auth-validation';
 
 export interface AuthConfig {
   apiUrl: string;
@@ -7,18 +7,20 @@ export interface AuthConfig {
 
 export const AUTH_STORAGE_KEY = 'rwkv_auth_config';
 
+const isBrowser = () => typeof window !== 'undefined';
+
 const getEnvConfig = (): AuthConfig | null => {
-  const rawApiUrl = import.meta.env.PUBLIC_RWKV_API_URL?.trim() || '';
+  const rawApiUrl = process.env.NEXT_PUBLIC_RWKV_API_URL?.trim() || '';
   const apiUrl = normalizeApiUrlWithPort(rawApiUrl);
   if (!apiUrl) return null;
   return {
     apiUrl,
-    password: import.meta.env.PUBLIC_RWKV_API_PASSWORD?.trim() || '',
+    password: process.env.NEXT_PUBLIC_RWKV_API_PASSWORD?.trim() || '',
   };
 };
 
 const getStorageConfig = (): AuthConfig | null => {
-  if (typeof localStorage === 'undefined') return null;
+  if (!isBrowser()) return null;
   const saved = localStorage.getItem(AUTH_STORAGE_KEY);
   if (!saved) return null;
   try {
@@ -33,7 +35,8 @@ const getStorageConfig = (): AuthConfig | null => {
 
     return {
       apiUrl: normalizedApiUrl,
-      password: typeof parsed.password === 'string' ? parsed.password.trim() : '',
+      password:
+        typeof parsed.password === 'string' ? parsed.password.trim() : '',
     };
   } catch {
     localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -50,7 +53,7 @@ export const resolveAuthConfig = (): AuthConfig | null => {
   const envConfig = getEnvConfig();
   const storageConfig = getStorageConfig();
 
-  if (import.meta.env.DEV) {
+  if (process.env.NODE_ENV === 'development') {
     return envConfig || storageConfig;
   }
   return storageConfig || envConfig;

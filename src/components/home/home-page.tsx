@@ -1,47 +1,49 @@
+'use client';
+
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from '@/components/ui/language-switcher';
-import { useAuth } from '@/contexts/AuthContext';
 import { Trash2 } from 'lucide-react';
-import { clearAppCache, clearChatPageCache } from '@/utils/storage';
+import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
+import { LanguageSwitcher } from '@/components/ui/language-switcher';
+import { useAuth } from '@/components/providers/auth-provider';
+import {
+  CHAT_INITIAL_MESSAGE_KEY,
+  CHAT_SHOULD_GENERATE_KEY,
+} from '@/lib/constants';
+import { CHAT_PAGE_PROMPT_KEY, clearAppCache, clearChatPageCache } from '@/lib/storage';
+
+const SUGGESTION_KEYS = [
+  'hotel',
+  'museum',
+  'cafe',
+  'retroShop',
+  'pomodoro',
+  'saas',
+] as const;
 
 export const HomePage = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { t } = useTranslation();
   const { logout } = useAuth();
   const [inputValue, setInputValue] = useState('');
 
-  const suggestions = [
-    t('homepage.suggestions.hotel'),
-    t('homepage.suggestions.museum'),
-    t('homepage.suggestions.cafe'),
-    t('homepage.suggestions.retroShop'),
-    t('homepage.suggestions.pomodoro'),
-    t('homepage.suggestions.saas'),
-  ];
-
-  const handleSuggestionClick = (suggestion: string) => {
-    setInputValue(suggestion);
-    // 也可以直接提交：handleSubmit(suggestion)
-  };
+  const suggestions = SUGGESTION_KEYS.map((key) =>
+    t(`homepage.suggestions.${key}`),
+  );
 
   const handleSubmit = (content: string) => {
-    if (content.trim()) {
-      clearChatPageCache();
-
-      navigate('/chat', { state: { initialMessage: content } });
-      setInputValue('');
-    }
+    if (!content.trim()) return;
+    clearChatPageCache();
+    sessionStorage.setItem(CHAT_SHOULD_GENERATE_KEY, '1');
+    sessionStorage.setItem(CHAT_INITIAL_MESSAGE_KEY, content);
+    localStorage.setItem(CHAT_PAGE_PROMPT_KEY, content);
+    router.push('/chat');
+    setInputValue('');
   };
 
   const handleClearCache = () => {
-    if (
-      confirm(
-        '确定要清除本地缓存吗？这将清除登录信息、聊天记录和模型参数设置。',
-      )
-    ) {
+    if (confirm(t('homepage.clearCacheConfirm'))) {
       clearAppCache({
         includeAuth: true,
         includeModelSettings: true,
@@ -53,9 +55,7 @@ export const HomePage = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/20 dark:from-[#212121] dark:to-[#212121] px-8 md:px-16 lg:px-24 xl:px-32 py-16">
-      {/* 右上角按钮组 */}
       <div className="fixed top-6 right-6 z-50 flex items-center gap-4">
-        {/* 清除缓存按钮 */}
         <button
           onClick={handleClearCache}
           className="flex items-center justify-center gap-2 h-16 px-6 rounded-2xl
@@ -63,24 +63,19 @@ export const HomePage = () => {
                      text-white text-lg font-semibold shadow-lg hover:shadow-xl
                      transition-all duration-200 hover:scale-105
                      border-2 border-red-400 dark:border-red-400"
-          title="清除本地缓存"
+          title={t('homepage.clearCacheTitle')}
         >
           <Trash2 className="h-6 w-6" />
-          <span>清除本地缓存</span>
+          <span>{t('homepage.clearCache')}</span>
         </button>
-
-        {/* 语言切换器 */}
         <LanguageSwitcher />
       </div>
 
-      {/* 版心更宽 - 使用更大的最大宽度 */}
       <div className="w-full max-w-[2000px] mx-auto flex flex-col items-center gap-16">
-        {/* Title - 更大更清晰的标题 */}
         <h1 className="text-8xl md:text-9xl xl:text-[13rem] font-extrabold tracking-tight text-foreground dark:text-white text-center leading-[0.9]">
           {t('homepage.title')}
         </h1>
 
-        {/* Input - 加宽输入框 */}
         <div className="w-full max-w-[1400px]">
           <ChatgptPromptInput
             value={inputValue}
@@ -90,12 +85,11 @@ export const HomePage = () => {
           />
         </div>
 
-        {/* Suggestions - 固定两列布局，更大的字体和间距 */}
         <div className="w-full grid grid-cols-2 gap-8 xl:gap-10">
           {suggestions.map((suggestion) => (
             <button
               key={suggestion}
-              onClick={() => handleSuggestionClick(suggestion)}
+              onClick={() => setInputValue(suggestion)}
               className="w-full px-10 py-8 rounded-2xl text-3xl xl:text-4xl font-semibold leading-relaxed
                          bg-secondary hover:bg-secondary/85 dark:bg-[#2d3135] dark:hover:bg-[#3b4045]
                          text-secondary-foreground dark:text-white transition-all duration-200 text-left

@@ -14,16 +14,18 @@ export const resources = {
   hi: { common: hiCommon },
 } as const satisfies Resource;
 
-i18n.use(initReactI18next).init({
-  resources,
-  lng: 'zh', // 默认语言
-  fallbackLng: 'zh',
-  ns: [defaultNS],
-  defaultNS,
-  interpolation: {
-    escapeValue: false, // React 已经转义
-  },
-  returnNull: false,
-});
+if (!i18n.isInitialized) {
+  void i18n.use(initReactI18next).init({
+    resources,
+    lng: 'zh',
+    fallbackLng: 'zh',
+    ns: [defaultNS],
+    defaultNS,
+    interpolation: {
+      escapeValue: false,
+    },
+    returnNull: false,
+  });
+}
 
 export default i18n;

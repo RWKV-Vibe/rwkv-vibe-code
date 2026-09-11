@@ -2,6 +2,9 @@
   "homepage": {
     "title": "What would you like to create?",
     "inputPlaceholder": "Describe your idea...",
+    "clearCache": "Clear local cache",
+    "clearCacheTitle": "Clear local cache",
+    "clearCacheConfirm": "Clear local cache? This will remove login info, chat history, and model settings.",
     "suggestions": {
       "hotel": "Generate a hotel page in Shenzhen with a green theme",
       "museum": "Create a Lu Xun Memorial Museum website with parchment scroll color scheme, including biography, literary works display, and historical photo gallery",
@@ -16,7 +19,13 @@
     "generating": "Generating...",
     "preparingRender": "Preparing preview...",
     "generationFailed": "Generation failed",
-    "layoutMode": "Layout"
+    "layoutMode": "Layout",
+    "backToHome": "Back to home",
+    "selectPrompt": "Pick a preset to get started",
+    "optimizePrompt": "Optimize prompt",
+    "stopGenerate": "Stop generation",
+    "tokenRate": "{{rate}} tok/s",
+    "totalTokens": "Total: {{count}} tokens"
   },
   "detailpage": {
     "back": "Back",
@@ -27,17 +36,46 @@
     "codeEditor": "HTML Code Editor",
     "preview": "Live Preview",
     "updateRealtime": "Code updates in real-time",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "liveUpdating": "Live updating",
+    "editMode": "Edit mode"
   },
   "aiService": {
-    "promptPrefix": "with HTML",
+    "promptPrefix": "with HTML and the Tailwind CSS CDN, create a complete, production-quality single-page website that opens as-is. It must include a top nav, a hero with a real headline, copy, and image, at least three filled content sections (image+text / feature cards / stats or lists), and a footer. Fill the page with real Unsplash photos, polished typography, and a coherent palette. No empty solid/gradient pages and no truncated code. Output only the full document from <!DOCTYPE html> to </html>, no explanation. Request:",
     "streamNotAvailable": "ReadableStream not available",
     "httpError": "HTTP {{status}} {{statusText}} {{text}}",
     "generationFailed": "Generation failed"
   },
   "common": {
     "close": "Close",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "send": "Send"
+  },
+  "auth": {
+    "title": "RWKV Vibe Code",
+    "subtitle": "Enter your server configuration to continue",
+    "apiLabel": "Full API URL",
+    "apiPlaceholder": "http://192.168.0.12:8000/v1/chat/completions",
+    "apiHint": "Enter a full URL including http/https, port, and API path",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter password",
+    "submit": "Connect",
+    "persistHint": "This configuration is stored in your browser. Use a trusted network."
+  },
+  "promptOptimize": {
+    "title": "Optimize Prompt",
+    "inputLabel": "Describe what you need:",
+    "generating": "Generating {{running}}/{{total}}",
+    "completed": "Completed {{completed}}/{{total}}",
+    "stop": "Stop",
+    "generate": "Generate",
+    "generatingButton": "Generating...",
+    "empty": "Click Generate to start optimizing...",
+    "copy": "Copy this prompt",
+    "useThis": "Click to use this prompt",
+    "resultsLabel": "Optimized prompts (pick one):",
+    "close": "Close",
+    "placeholder": "Describe the webpage you want to create..."
   },
   "modelSettings": {
     "title": "Model Settings",

@@ -2,6 +2,9 @@
   "homepage": {
     "title": "आप क्या बनाना चाहते हैं?",
     "inputPlaceholder": "अपना आइडिया बताइए...",
+    "clearCache": "लोकल कैश साफ़ करें",
+    "clearCacheTitle": "लोकल कैश साफ़ करें",
+    "clearCacheConfirm": "लोकल कैश साफ़ करें? लॉगिन जानकारी, चैट इतिहास और मॉडल सेटिंग्स हट जाएँगी।",
     "suggestions": {
       "hotel": "शेन्‍जेन के लिए हरे थीम वाला होटल पेज बनाएं",
       "museum": "लू शुन स्मारक संग्रहालय की वेबसाइट बनाएँ, समग्र रूप से पार्चमेंट स्क्रॉल रंग योजना के साथ, जिसमें जीवन परिचय, साहित्यिक कृतियों का प्रदर्शन और ऐतिहासिक फोटो गैलरी हो",
@@ -16,7 +19,13 @@
     "generating": "जनरेट हो रहा है...",
     "preparingRender": "प्रीव्यू तैयार किया जा रहा है...",
     "generationFailed": "जनरेशन विफल",
-    "layoutMode": "लेआउट"
+    "layoutMode": "लेआउट",
+    "backToHome": "होम पर वापस जाएँ",
+    "selectPrompt": "शुरू करने के लिए एक प्रीसेट चुनें",
+    "optimizePrompt": "प्रॉम्प्ट ऑप्टिमाइज़ करें",
+    "stopGenerate": "जनरेशन रोकें",
+    "tokenRate": "{{rate}} tok/s",
+    "totalTokens": "कुल: {{count}} tokens"
   },
   "detailpage": {
     "back": "वापस",
@@ -27,17 +36,46 @@
     "codeEditor": "HTML कोड संपादक",
     "preview": "लाइव प्रीव्यू",
     "updateRealtime": "एडिट का रियल-टाइम अपडेट",
-    "copyFailed": "कॉपी विफल"
+    "copyFailed": "कॉपी विफल",
+    "liveUpdating": "लाइव अपडेट हो रहा है",
+    "editMode": "एडिट मोड"
   },
   "aiService": {
-    "promptPrefix": "HTML में",
+    "promptPrefix": "HTML और Tailwind CSS CDN के साथ एक पूरा, खूबसूरत सिंगल-पेज वेबसाइट बनाएं जो सीधे खुल सके। ज़रूरी: टॉप नेव, असली हेडलाइन-कॉपी-इमेज वाला हीरो, कम से कम तीन भरे हुए सेक्शन (इमेज+टेक्स्ट / कार्ड / आँकड़े या लिस्ट), और फुटर। Unsplash की असली फ़ोटो से पेज भरें; खाली सॉलिड/ग्रेडिएंट पेज और अधूरा कोड मना है। केवल <!DOCTYPE html> से </html> तक पूरा कोड दें, कोई व्याख्या नहीं। मांग:",
     "streamNotAvailable": "ReadableStream उपलब्ध नहीं है",
     "httpError": "HTTP {{status}} {{statusText}} {{text}}",
     "generationFailed": "जनरेशन विफल"
   },
   "common": {
     "close": "बंद करें",
-    "cancel": "रद्द करें"
+    "cancel": "रद्द करें",
+    "send": "भेजें"
+  },
+  "auth": {
+    "title": "RWKV Vibe Code",
+    "subtitle": "जारी रखने के लिए सर्वर कॉन्फ़िगरेशन दर्ज करें",
+    "apiLabel": "पूरा API URL",
+    "apiPlaceholder": "http://192.168.0.12:8000/v1/chat/completions",
+    "apiHint": "http/https, पोर्ट और API पथ सहित पूरा URL दर्ज करें",
+    "passwordLabel": "पासवर्ड",
+    "passwordPlaceholder": "पासवर्ड दर्ज करें",
+    "submit": "सर्वर से कनेक्ट करें",
+    "persistHint": "यह कॉन्फ़िगरेशन आपके ब्राउज़र में सहेजा जाता है। विश्वसनीय नेटवर्क का उपयोग करें।"
+  },
+  "promptOptimize": {
+    "title": "प्रॉम्प्ट ऑप्टिमाइज़ करें",
+    "inputLabel": "अपनी ज़रूरत लिखें:",
+    "generating": "जनरेट हो रहा है {{running}}/{{total}}",
+    "completed": "पूर्ण {{completed}}/{{total}}",
+    "stop": "रोकें",
+    "generate": "जनरेट करें",
+    "generatingButton": "जनरेट हो रहा है...",
+    "empty": "ऑप्टिमाइज़ शुरू करने के लिए जनरेट पर क्लिक करें...",
+    "copy": "यह प्रॉम्प्ट कॉपी करें",
+    "useThis": "इस प्रॉम्प्ट का उपयोग करने के लिए क्लिक करें",
+    "resultsLabel": "ऑप्टिमाइज़्ड प्रॉम्प्ट (एक चुनें):",
+    "close": "बंद करें",
+    "placeholder": "जिस वेबपेज को आप बनाना चाहते हैं, उसका वर्णन करें..."
   },
   "modelSettings": {
     "title": "मॉडल सेटिंग्स",

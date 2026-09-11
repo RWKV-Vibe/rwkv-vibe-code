@@ -1,14 +1,17 @@
-import { createContext, useContext, useState } from 'react';
+'use client';
+
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   AUTH_STORAGE_KEY,
   resolveAuthConfig,
   type AuthConfig,
-} from '@/utils/authConfig';
-import { normalizeApiUrlWithPort } from '@/utils/authValidation';
+} from '@/lib/auth-config';
+import { normalizeApiUrlWithPort } from '@/lib/auth-validation';
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  hydrated: boolean;
   apiUrl: string;
   password: string;
   login: (apiUrl: string, password: string) => void;
@@ -18,15 +21,17 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [authConfig, setAuthConfig] = useState<AuthConfig | null>(() =>
-    resolveAuthConfig(),
-  );
+  const [hydrated, setHydrated] = useState(false);
+  const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
+
+  useEffect(() => {
+    setAuthConfig(resolveAuthConfig());
+    setHydrated(true);
+  }, []);
 
   const login = (apiUrl: string, password: string) => {
     const normalizedApiUrl = normalizeApiUrlWithPort(apiUrl);
-    if (!normalizedApiUrl) {
-      return;
-    }
+    if (!normalizedApiUrl) return;
 
     const config = { apiUrl: normalizedApiUrl, password: password.trim() };
     setAuthConfig(config);
@@ -35,7 +40,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
-    // 退出后重新解析：开发环境仍会回落到 .env，避免循环登录
     setAuthConfig(resolveAuthConfig());
   };
 
@@ -43,6 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         isAuthenticated: !!authConfig,
+        hydrated,
         apiUrl: authConfig?.apiUrl || '',
         password: authConfig?.password || '',
         login,

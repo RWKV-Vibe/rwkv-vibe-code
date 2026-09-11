@@ -1,17 +1,13 @@
-version: "3.9"
-
 services:
   rwkv-code:
     container_name: rwkv-code
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        NODE_ENV: production
     environment:
       NODE_ENV: production
       PORT: 3000
-      HOST: 0.0.0.0
+      HOSTNAME: 0.0.0.0
     ports:
       - "3000:3000"
     restart: unless-stopped

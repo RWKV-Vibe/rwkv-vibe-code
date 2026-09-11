@@ -28,7 +28,6 @@ export interface SettingMeta {
   min: number;
   max: number;
   step: number;
-  /** 整数字段（如 top_k / max_tokens / chunk_size） */
   integer?: boolean;
 }
 
@@ -72,10 +71,7 @@ export const loadModelSettings = (): ModelSettings => {
 export const saveModelSettings = (settings: ModelSettings): void => {
   if (typeof localStorage === 'undefined') return;
   const normalized = sanitize(settings);
-  localStorage.setItem(
-    MODEL_SETTINGS_STORAGE_KEY,
-    JSON.stringify(normalized),
-  );
+  localStorage.setItem(MODEL_SETTINGS_STORAGE_KEY, JSON.stringify(normalized));
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
       new CustomEvent<ModelSettings>(MODEL_SETTINGS_EVENT, {

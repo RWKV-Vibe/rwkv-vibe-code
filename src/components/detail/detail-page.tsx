@@ -1,164 +1,92 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import Editor from '@monaco-editor/react';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Eye, Code2, Copy, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { DEFAULT_DETAIL_HTML, isPlaceholderHtml } from '@/lib/html';
+import {
+  createDetailChannel,
+  loadChatResults,
+  type DetailChannelMessage,
+} from '@/lib/chat-sync';
+import { getGenerationStore } from '@/lib/generation-store';
 
-const DEFAULT_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Preview</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
-  <div class="text-center">
-    <h1 class="text-4xl font-bold text-gray-800 mb-4">Welcome!</h1>
-    <p class="text-gray-600">Start editing to see your changes</p>
-  </div>
-</body>
-</html>`;
+const Editor = dynamic(() => import('@monaco-editor/react'), {
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-[#1e1e1e]" />,
+});
 
 export const DetailPage = () => {
-  const location = useLocation();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
+  const indexParam = searchParams?.get('index') ?? null;
+  const resultIndex =
+    indexParam !== null && indexParam !== ''
+      ? Number.parseInt(indexParam, 10)
+      : undefined;
 
-  // 从 URL 查询参数获取 index
-  const searchParams = new URLSearchParams(location.search);
-  const resultIndex = searchParams.get('index')
-    ? parseInt(searchParams.get('index')!)
-    : undefined;
-
-  // 从 sessionStorage 获取初始数据
-  const [initialHtmlCode] = useState(() => {
-    if (resultIndex === undefined) {
-      console.warn('DetailPage: resultIndex 未定义');
-      return (
-        (location.state as { htmlCode?: string })?.htmlCode || DEFAULT_HTML
-      );
-    }
-
-    console.log(
-      `DetailPage #${resultIndex} 初始化，从 localStorage 读取数据...`,
-    );
-
-    // 1. 先从 localStorage 的 chatPageResults 读取（跨标签页共享）
-    try {
-      const chatPageResults = localStorage.getItem('chatPageResults');
-      if (chatPageResults) {
-        const results = JSON.parse(chatPageResults);
-        const htmlCode = results[resultIndex]?.htmlCode;
-
-        if (htmlCode && htmlCode !== DEFAULT_HTML) {
-          console.log(
-            `✅ 从 localStorage 读取成功，HTML 长度: ${htmlCode.length}`,
-          );
-          return htmlCode;
-        } else {
-          console.log(
-            `localStorage 中索引 ${resultIndex} 的数据无效，长度: ${htmlCode?.length || 0}`,
-          );
-        }
-      } else {
-        console.log('localStorage 不存在，尝试从 globalState 读取');
-      }
-    } catch (error) {
-      console.error('从 localStorage 读取失败:', error);
-    }
-
-    // 2. 如果 chatPageResults 没有，从 globalState 读取（生成中的数据）
-    try {
-      const globalState = (window as any).__chatPageGlobalState;
-      if (globalState?.updateBuffer) {
-        const latestUpdate = globalState.updateBuffer.get(resultIndex);
-        if (latestUpdate?.htmlCode && latestUpdate.htmlCode !== DEFAULT_HTML) {
-          console.log(
-            `✅ 从 globalState 读取成功，HTML 长度: ${latestUpdate.htmlCode.length}`,
-          );
-          return latestUpdate.htmlCode;
-        }
-      }
-    } catch (error) {
-      console.error('从 globalState 读取失败:', error);
-    }
-
-    // 3. 都失败，使用默认值
-    console.error(`❌ DetailPage #${resultIndex} 无法获取有效数据`);
-    return DEFAULT_HTML;
-  });
-
-  const [htmlCode, setHtmlCode] = useState(initialHtmlCode);
+  const [htmlCode, setHtmlCode] = useState(DEFAULT_DETAIL_HTML);
   const [copied, setCopied] = useState(false);
   const [hasUserEdited, setHasUserEdited] = useState(false);
   const [isLiveUpdating, setIsLiveUpdating] = useState(false);
 
-  // 监听 BroadcastChannel 接收实时更新
   useEffect(() => {
-    if (resultIndex === undefined) {
-      console.warn('DetailPage: resultIndex 未定义');
+    if (resultIndex === undefined || Number.isNaN(resultIndex)) return;
+
+    const results = loadChatResults();
+    const stored = results[resultIndex]?.htmlCode;
+    if (stored && !isPlaceholderHtml(stored)) {
+      setHtmlCode(stored);
       return;
     }
 
-    const channel = new BroadcastChannel('rwkv-detail-channel');
+    const latest = getGenerationStore().updateBuffer.get(resultIndex);
+    if (latest?.htmlCode && !isPlaceholderHtml(latest.htmlCode)) {
+      setHtmlCode(latest.htmlCode);
+    }
+  }, [resultIndex]);
 
-    // 检查是否正在生成
-    const globalState = (window as any).__chatPageGlobalState;
-    if (globalState && globalState.isGenerating) {
+  useEffect(() => {
+    if (resultIndex === undefined || Number.isNaN(resultIndex)) return;
+
+    const channel = createDetailChannel();
+    const store = getGenerationStore();
+    if (store.isGenerating) {
       setIsLiveUpdating(true);
-
-      // 从 updateBuffer 获取最新内容
-      const updateBuffer = globalState.updateBuffer;
-      if (updateBuffer && updateBuffer.has(resultIndex)) {
-        const latestUpdate = updateBuffer.get(resultIndex);
-        if (latestUpdate && latestUpdate.htmlCode && !hasUserEdited) {
-          setHtmlCode(latestUpdate.htmlCode);
-        }
+      const latest = store.updateBuffer.get(resultIndex);
+      if (latest?.htmlCode && !hasUserEdited) {
+        setHtmlCode(latest.htmlCode);
       }
     }
 
-    channel.onmessage = (event) => {
-      const { type, index, htmlCode: newHtmlCode } = event.data;
-
-      // 处理初始化消息（INIT_DETAIL）- 作为备用初始化方式
-      if (type === 'INIT_DETAIL' && index === resultIndex) {
-        if (!hasUserEdited && newHtmlCode && newHtmlCode !== DEFAULT_HTML) {
-          setHtmlCode(newHtmlCode);
-          setIsLiveUpdating(globalState?.isGenerating || false);
+    channel.onmessage = (event: MessageEvent<DetailChannelMessage>) => {
+      const data = event.data;
+      if (data.type === 'INIT_DETAIL' && data.index === resultIndex) {
+        if (!hasUserEdited && data.htmlCode && !isPlaceholderHtml(data.htmlCode)) {
+          setHtmlCode(data.htmlCode);
+          setIsLiveUpdating(store.isGenerating);
         }
         return;
       }
 
-      // 只处理与当前 index 匹配的 UPDATE_CONTENT 消息
-      if (index !== resultIndex) return;
+      if (data.type === 'UPDATE_CONTENT' && data.index === resultIndex) {
+        if (data.htmlCode && !hasUserEdited) {
+          setHtmlCode(data.htmlCode);
+          setIsLiveUpdating(true);
+        }
+        return;
+      }
 
-      if (type === 'UPDATE_CONTENT' && newHtmlCode && !hasUserEdited) {
-        setHtmlCode(newHtmlCode);
-        setIsLiveUpdating(true);
-      } else if (
-        type === 'GENERATION_COMPLETE' ||
-        type === 'GENERATION_ERROR'
-      ) {
+      if (data.type === 'GENERATION_COMPLETE' || data.type === 'GENERATION_ERROR') {
         setIsLiveUpdating(false);
       }
     };
 
-    // 发送就绪信号
-    channel.postMessage({
-      type: 'DETAIL_READY',
-      index: resultIndex,
-    });
-
-    return () => {
-      channel.close();
-    };
-  }, [resultIndex, hasUserEdited]);
-
-  // 监听用户编辑
-  const handleEditorChange = (value: string | undefined) => {
-    setHtmlCode(value || '');
-    setHasUserEdited(true); // 标记用户已编辑
-  };
+    channel.postMessage({ type: 'DETAIL_READY', index: resultIndex });
+    return () => channel.close();
+  }, [hasUserEdited, resultIndex]);
 
   const handleCopy = async () => {
     try {
@@ -184,23 +112,22 @@ export const DetailPage = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background dark:bg-[#1e1e1e]">
-      {/* 顶部工具栏 - 超大响应式设计 */}
       <div className="h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36 border-b-2 border-border dark:border-gray-700 bg-white dark:bg-[#252525] flex items-center justify-between px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20">
         <div className="flex items-center gap-4 sm:gap-6 md:gap-8 lg:gap-12">
-          {resultIndex !== undefined && (
+          {resultIndex !== undefined && !Number.isNaN(resultIndex) && (
             <div className="flex items-center gap-4">
               <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-600 dark:text-gray-400">
                 {t('detailpage.solution', { number: resultIndex + 1 })}
               </span>
               {isLiveUpdating && !hasUserEdited && (
                 <span className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900 rounded-full text-sm font-semibold text-blue-600 dark:text-blue-300 animate-pulse">
-                  <span className="w-2 h-2 bg-blue-600 dark:bg-blue-300 rounded-full"></span>
-                  <span>{t('detailpage.liveUpdating') || '实时更新中'}</span>
+                  <span className="w-2 h-2 bg-blue-600 dark:bg-blue-300 rounded-full" />
+                  <span>{t('detailpage.liveUpdating')}</span>
                 </span>
               )}
               {hasUserEdited && (
                 <span className="flex items-center gap-2 px-4 py-2 bg-orange-100 dark:bg-orange-900 rounded-full text-sm font-semibold text-orange-600 dark:text-orange-300">
-                  <span>{t('detailpage.editMode') || '编辑模式'}</span>
+                  <span>{t('detailpage.editMode')}</span>
                 </span>
               )}
             </div>
@@ -208,9 +135,8 @@ export const DetailPage = () => {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8">
-          {/* 操作按钮 - 超大响应式 */}
           <button
-            onClick={handleCopy}
+            onClick={() => void handleCopy()}
             className="flex items-center gap-3 md:gap-4 px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 lg:px-12 lg:py-6 xl:px-14 xl:py-7 rounded-2xl text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-[1.02] shadow-lg"
           >
             <Copy className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14" />
@@ -228,9 +154,7 @@ export const DetailPage = () => {
         </div>
       </div>
 
-      {/* 主内容区域：响应式布局 - 小屏幕上下，大屏幕左右 */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* 左侧/上侧：代码编辑器 */}
         <div className="w-full lg:w-1/2 h-1/2 lg:h-full border-b-2 lg:border-b-0 lg:border-r-2 border-border dark:border-gray-700 bg-[#1e1e1e]">
           <div className="h-full flex flex-col">
             <div className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 py-4 sm:py-5 md:py-6 lg:py-8 xl:py-10 bg-[#252525] border-b-2 border-gray-700">
@@ -244,7 +168,10 @@ export const DetailPage = () => {
                 height="100%"
                 defaultLanguage="html"
                 value={htmlCode}
-                onChange={handleEditorChange}
+                onChange={(value) => {
+                  setHtmlCode(value || '');
+                  setHasUserEdited(true);
+                }}
                 theme="vs-dark"
                 options={{
                   minimap: { enabled: false },
@@ -270,7 +197,6 @@ export const DetailPage = () => {
           </div>
         </div>
 
-        {/* 右侧/下侧：预览效果 */}
         <div className="w-full lg:w-1/2 h-1/2 lg:h-full bg-white">
           <div className="h-full flex flex-col">
             <div className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 py-4 sm:py-5 md:py-6 lg:py-8 xl:py-10 bg-gray-50 dark:bg-[#252525] border-b-2 border-border dark:border-gray-700">

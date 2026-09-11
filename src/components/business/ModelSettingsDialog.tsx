@@ -1,3 +1,5 @@
+'use client';
+
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Settings, X, RotateCcw, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +10,7 @@ import {
   saveModelSettings,
   type ModelSettings,
   type SettingMeta,
-} from '@/utils/modelSettings';
+} from '@/lib/model-settings';
 
 interface ModelSettingsDialogProps {
   isOpen: boolean;
@@ -17,14 +19,17 @@ interface ModelSettingsDialogProps {
 
 const formatValue = (value: number, meta: SettingMeta): string => {
   if (meta.integer) return String(Math.round(value));
-  const decimals = meta.step >= 1 ? 0 : meta.step >= 0.1 ? 1 : meta.step >= 0.01 ? 2 : 3;
+  const decimals =
+    meta.step >= 1 ? 0 : meta.step >= 0.1 ? 1 : meta.step >= 0.01 ? 2 : 3;
   return value.toFixed(decimals);
 };
 
 export const ModelSettingsDialog = memo(
   ({ isOpen, onClose }: ModelSettingsDialogProps) => {
     const { t } = useTranslation();
-    const [draft, setDraft] = useState<ModelSettings>(() => loadModelSettings());
+    const [draft, setDraft] = useState<ModelSettings>(() =>
+      loadModelSettings(),
+    );
 
     useEffect(() => {
       if (isOpen) {
@@ -39,15 +44,12 @@ export const ModelSettingsDialog = memo(
       );
     }, [draft]);
 
-    const updateField = useCallback(
-      (meta: SettingMeta, rawValue: number) => {
-        if (!Number.isFinite(rawValue)) return;
-        const clamped = Math.min(Math.max(rawValue, meta.min), meta.max);
-        const next = meta.integer ? Math.round(clamped) : clamped;
-        setDraft((prev) => ({ ...prev, [meta.key]: next }));
-      },
-      [],
-    );
+    const updateField = useCallback((meta: SettingMeta, rawValue: number) => {
+      if (!Number.isFinite(rawValue)) return;
+      const clamped = Math.min(Math.max(rawValue, meta.min), meta.max);
+      const next = meta.integer ? Math.round(clamped) : clamped;
+      setDraft((prev) => ({ ...prev, [meta.key]: next }));
+    }, []);
 
     const handleReset = useCallback(() => {
       setDraft({ ...DEFAULT_MODEL_SETTINGS });
@@ -63,7 +65,6 @@ export const ModelSettingsDialog = memo(
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
         <div className="bg-white dark:bg-[#2d2d2d] rounded-3xl shadow-2xl w-[76vw] max-w-[1850px] max-h-[90vh] overflow-hidden flex flex-col">
-          {/* Header */}
           <div className="flex items-center justify-between px-10 py-6 border-b-4 border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div className="flex items-center gap-6">
               <Settings className="h-16 w-16 text-blue-600 dark:text-blue-400" />
@@ -80,7 +81,6 @@ export const ModelSettingsDialog = memo(
             </button>
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto px-10 py-8">
             <p className="text-[1.8rem] text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
               {t('modelSettings.description')}
@@ -140,7 +140,6 @@ export const ModelSettingsDialog = memo(
             </div>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-between gap-4 px-10 py-6 border-t-4 border-gray-200 dark:border-gray-700 flex-shrink-0">
             <button
               onClick={handleReset}

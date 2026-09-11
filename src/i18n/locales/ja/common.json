@@ -2,6 +2,9 @@
   "homepage": {
     "title": "何を作成しますか？",
     "inputPlaceholder": "あなたのアイデアを説明してください...",
+    "clearCache": "ローカルキャッシュを削除",
+    "clearCacheTitle": "ローカルキャッシュを削除",
+    "clearCacheConfirm": "ローカルキャッシュを削除しますか？ログイン情報、チャット履歴、モデル設定が消去されます。",
     "suggestions": {
       "hotel": "深圳のホテルページを生成。グリーン系のテーマ",
       "museum": "魯迅記念館のサイトを作成。羊皮紙風の配色を全体に採用し、生涯紹介・文学作品の展示・歴史写真ギャラリーを含む",
@@ -16,7 +19,13 @@
     "generating": "生成中...",
     "preparingRender": "プレビューを準備中...",
     "generationFailed": "生成に失敗しました",
-    "layoutMode": "レイアウト"
+    "layoutMode": "レイアウト",
+    "backToHome": "ホームに戻る",
+    "selectPrompt": "プリセットを選んで開始",
+    "optimizePrompt": "プロンプトを最適化",
+    "stopGenerate": "生成を停止",
+    "tokenRate": "{{rate}} tok/s",
+    "totalTokens": "合計: {{count}} tokens"
   },
   "detailpage": {
     "back": "戻る",
@@ -27,17 +36,46 @@
     "codeEditor": "HTML コードエディタ",
     "preview": "ライブプレビュー",
     "updateRealtime": "編集内容をリアルタイム反映",
-    "copyFailed": "コピーに失敗しました"
+    "copyFailed": "コピーに失敗しました",
+    "liveUpdating": "リアルタイム更新中",
+    "editMode": "編集モード"
   },
   "aiService": {
-    "promptPrefix": "HTMLで",
+    "promptPrefix": "HTMLと Tailwind CSS CDN で、すぐに開ける完成度の高い単一ページを作成してください。必須：上部ナビ、本物の見出し・コピー・画像があるヒーロー、少なくとも3つのコンテンツ区画（図文/カード/数値やリスト）、フッター。Unsplash の実写真でページを埋め、単色やグラデだけの空ページ、途中で切れたコードは禁止。<!DOCTYPE html> から </html> までの完全なコードだけを出力し、説明は不要。要件：",
     "streamNotAvailable": "ReadableStream は使用できません",
     "httpError": "HTTP {{status}} {{statusText}} {{text}}",
     "generationFailed": "生成に失敗しました"
   },
   "common": {
     "close": "閉じる",
-    "cancel": "キャンセル"
+    "cancel": "キャンセル",
+    "send": "送信"
+  },
+  "auth": {
+    "title": "RWKV Vibe Code",
+    "subtitle": "続行するにはサーバー設定を入力してください",
+    "apiLabel": "API の完全な URL",
+    "apiPlaceholder": "http://192.168.0.12:8000/v1/chat/completions",
+    "apiHint": "http/https、ポート、API パスを含む完全な URL を入力",
+    "passwordLabel": "パスワード",
+    "passwordPlaceholder": "パスワードを入力",
+    "submit": "サーバーに接続",
+    "persistHint": "設定はブラウザに保存されます。信頼できるネットワークを使用してください。"
+  },
+  "promptOptimize": {
+    "title": "プロンプトを最適化",
+    "inputLabel": "要件を入力：",
+    "generating": "生成中 {{running}}/{{total}}",
+    "completed": "完了 {{completed}}/{{total}}",
+    "stop": "生成を停止",
+    "generate": "最適化を生成",
+    "generatingButton": "生成中...",
+    "empty": "「最適化を生成」をクリックして開始...",
+    "copy": "このプロンプトをコピー",
+    "useThis": "クリックしてこのプロンプトを使用",
+    "resultsLabel": "最適化後のプロンプト（1つ選択）：",
+    "close": "閉じる",
+    "placeholder": "作りたい Web ページを説明してください..."
   },
   "modelSettings": {
     "title": "モデル設定",

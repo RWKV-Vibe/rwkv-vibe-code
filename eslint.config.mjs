@@ -1,29 +1,16 @@
-import js from '@eslint/js';
-import { defineConfig, globalIgnores } from 'eslint/config';
-import reactHooks from 'eslint-plugin-react-hooks';
-import reactRefresh from 'eslint-plugin-react-refresh';
-import globals from 'globals';
-import tseslint from 'typescript-eslint';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { FlatCompat } from '@eslint/eslintrc';
 
-export default defineConfig([
-  globalIgnores(['dist']),
+const compat = new FlatCompat({
+  baseDirectory: dirname(fileURLToPath(import.meta.url)),
+});
+
+const eslintConfig = [
+  ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactRefresh.configs.vite,
-    ],
-    plugins: {
-      'react-hooks': reactHooks,
-    },
-    rules: {
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-    },
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
-    },
+    ignores: ['.next/**', 'out/**', 'node_modules/**'],
   },
-]);
+];
+
+export default eslintConfig;
