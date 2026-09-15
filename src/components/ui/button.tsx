@@ -20,12 +20,19 @@ const buttonVariants = cva(
           'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
+        /** 工具栏图标按钮：静置时压暗，hover 才提亮，不跟主内容抢注意力 */
+        toolbar:
+          'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white',
+        /** 停止生成这类破坏性操作：保留红色语义，但用淡色底而不是实心块 */
+        'destructive-soft':
+          'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20',
       },
       size: {
         default: 'h-10 px-4 py-2',
         sm: 'h-9 rounded-md px-3',
         lg: 'h-11 rounded-md px-8',
         icon: 'h-10 w-10',
+        'icon-sm': 'h-9 w-9 rounded-lg',
       },
     },
     defaultVariants: {

@@ -13,7 +13,7 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   temperature: 1.0,
   top_k: 60,
   top_p: 0.5,
-  max_tokens: 8192,
+  max_tokens: 20000,
   alpha_presence: 1.0,
   alpha_frequency: 0.1,
   alpha_decay: 0.99,

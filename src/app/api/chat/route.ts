@@ -1,79 +1,51 @@
-import { validateApiUrlWithPort } from '@/lib/auth-validation';
+import { normalizeApiUrlWithPort } from '@/lib/auth-validation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
-const STREAM_HEADERS = {
-  'Cache-Control': 'no-cache, no-transform',
-  'X-Accel-Buffering': 'no',
-} as const;
-
-const jsonError = (message: string, status: number) =>
-  Response.json({ error: message }, { status });
-
-const resolveBackendUrl = (payload: Record<string, unknown>): string | null => {
-  const fromBody = typeof payload.apiUrl === 'string' ? payload.apiUrl : '';
-  const fromEnv = process.env.NEXT_PUBLIC_RWKV_API_URL?.trim() || '';
-  const validated = validateApiUrlWithPort(fromBody || fromEnv);
-  return validated.ok ? validated.normalizedUrl : null;
-};
+/** HTML vibe coding 微调好的 state，走真实后端时始终启用 */
+const STATE_ID = 'html_vibe_ctx2048.pth';
 
 export async function POST(request: Request) {
-  let payload: Record<string, unknown>;
-  try {
-    payload = (await request.json()) as Record<string, unknown>;
-  } catch {
-    return jsonError('请求体必须是 JSON', 400);
-  }
+  const payload = (await request.json()) as Record<string, unknown>;
 
-  const backendUrl = resolveBackendUrl(payload);
+  const backendUrl = normalizeApiUrlWithPort(
+    typeof payload.apiUrl === 'string' ? payload.apiUrl : '',
+  );
   if (!backendUrl) {
-    return jsonError('后端 API 地址无效', 400);
+    return Response.json({ error: '后端 API 地址无效' }, { status: 400 });
   }
 
-  const backendPayload = { ...payload };
+  const backendPayload: Record<string, unknown> = {
+    ...payload,
+    state_id: STATE_ID,
+  };
   delete backendPayload.apiUrl;
 
-  let backendResponse: Response;
-  try {
-    backendResponse = await fetch(backendUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(backendPayload),
-      signal: request.signal,
-      cache: 'no-store',
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return new Response(null, { status: 499 });
-    }
-    const message =
-      error instanceof Error ? error.message : '无法连接后端';
-    return jsonError(`请求后端失败: ${message}`, 502);
-  }
+  console.log('[chat] ->', backendUrl);
+  console.log('[chat] payload:', JSON.stringify(backendPayload, null, 2));
 
-  if (!backendResponse.body) {
-    const text = await backendResponse.text().catch(() => '');
-    return new Response(text, {
-      status: backendResponse.status,
-      statusText: backendResponse.statusText,
-      headers: {
-        'Content-Type':
-          backendResponse.headers.get('Content-Type') ??
-          'text/plain; charset=utf-8',
-      },
-    });
+  const backendResponse = await fetch(backendUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(backendPayload),
+    signal: request.signal,
+    cache: 'no-store',
+  });
+
+  const headers = new Headers({
+    'Cache-Control': 'no-cache, no-transform',
+    'X-Accel-Buffering': 'no',
+  });
+  const contentType = backendResponse.headers.get('Content-Type');
+  if (contentType) {
+    headers.set('Content-Type', contentType);
   }
 
   return new Response(backendResponse.body, {
     status: backendResponse.status,
     statusText: backendResponse.statusText,
-    headers: {
-      ...STREAM_HEADERS,
-      'Content-Type':
-        backendResponse.headers.get('Content-Type') ??
-        'text/event-stream; charset=utf-8',
-    },
+    headers,
   });
 }

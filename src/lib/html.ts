@@ -79,11 +79,22 @@ export const extractHTMLCode = (content: string): string => {
   return '';
 };
 
+/*
+ * 增量小于这个值就直接跳过后面的扫描。
+ * 这个函数是按 token 调的（24 路流 x 每个 delta 一次），而下面每一条判断
+ * 都要 substring 出增量再做若干次 includes —— 逐 token 全量扫描纯属浪费。
+ * 攒到接近一行 HTML 的量再看，不会丢事件：oldLength 只在返回 true 时前进，
+ * 所以这一轮跳过的内容下一轮仍然在 addedContent 里。
+ */
+const MIN_DELTA_TO_INSPECT = 96;
+
 export const shouldTriggerRender = (
   newContent: string,
   oldLength: number,
 ): boolean => {
   const newLength = newContent.length;
+  if (newLength - oldLength < MIN_DELTA_TO_INSPECT) return false;
+
   const addedContent = newContent.substring(oldLength);
 
   if (oldLength === 0 && newLength > 500) {

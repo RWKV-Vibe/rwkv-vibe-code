@@ -19,7 +19,6 @@
     "generating": "生成中...",
     "preparingRender": "プレビューを準備中...",
     "generationFailed": "生成に失敗しました",
-    "layoutMode": "レイアウト",
     "backToHome": "ホームに戻る",
     "selectPrompt": "プリセットを選んで開始",
     "optimizePrompt": "プロンプトを最適化",

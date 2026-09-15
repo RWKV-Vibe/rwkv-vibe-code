@@ -19,7 +19,6 @@
     "generating": "जनरेट हो रहा है...",
     "preparingRender": "प्रीव्यू तैयार किया जा रहा है...",
     "generationFailed": "जनरेशन विफल",
-    "layoutMode": "लेआउट",
     "backToHome": "होम पर वापस जाएँ",
     "selectPrompt": "शुरू करने के लिए एक प्रीसेट चुनें",
     "optimizePrompt": "प्रॉम्प्ट ऑप्टिमाइज़ करें",

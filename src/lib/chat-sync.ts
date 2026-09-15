@@ -4,19 +4,6 @@ import { DEFAULT_HTML, isPlaceholderHtml } from '@/lib/html';
 import type { GeneratedResult } from '@/types/chat';
 import { GENERATION_COUNT } from '@/lib/constants';
 
-export type LayoutMode = '12x2' | '8x3' | '6x4';
-
-export const LAYOUT_MODES: LayoutMode[] = ['12x2', '8x3', '6x4'];
-
-export const LAYOUT_MODE_COLUMNS: Record<LayoutMode, number> = {
-  '12x2': 12,
-  '8x3': 8,
-  '6x4': 6,
-};
-
-export const isLayoutMode = (value: string | null): value is LayoutMode =>
-  value === '12x2' || value === '8x3' || value === '6x4';
-
 export type ResultUpdate = { content: string; htmlCode: string };
 
 export type DetailChannelMessage =
@@ -101,11 +88,21 @@ export const mergeResultsWithBuffer = (
 export const createDetailChannel = (): BroadcastChannel =>
   new BroadcastChannel(DETAIL_CHANNEL_NAME);
 
+/**
+ * 只广播 indexes 里点名的那几条。
+ *
+ * 原来是把整个 buffer 无差别发一遍：24 份完整 HTML 每次刷新都要走一次
+ * structured clone，而绝大多数时候一个详情页都没开，这些消息全都发给了空气。
+ * 现在由调用方交叉「本轮真的变了的」和「真的有窗口在听的」，再决定发什么。
+ */
 export const postDetailUpdates = (
   channel: BroadcastChannel,
   updates: Map<number, ResultUpdate>,
+  indexes: Iterable<number>,
 ): void => {
-  updates.forEach((update, index) => {
+  for (const index of indexes) {
+    const update = updates.get(index);
+    if (!update) continue;
     const message: DetailChannelMessage = {
       type: 'UPDATE_CONTENT',
       index,
@@ -113,5 +110,5 @@ export const postDetailUpdates = (
       content: update.content,
     };
     channel.postMessage(message);
-  });
+  }
 };

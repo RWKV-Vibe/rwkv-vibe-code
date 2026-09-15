@@ -139,35 +139,35 @@ export const PromptOptimizeDialog = memo(
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-        <div className="bg-white dark:bg-[#2d2d2d] rounded-3xl shadow-2xl w-[60vw] h-[70vh] overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-8 py-4 border-b-4 border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <div className="flex items-center gap-6">
-              <Wand2 className="h-16 w-16 text-purple-600 dark:text-purple-400" />
-              <h2 className="text-7xl font-bold text-gray-900 dark:text-gray-100">
+        <div className="bg-white dark:bg-[#2d2d2d] rounded-2xl shadow-2xl w-full max-w-5xl h-[72vh] overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <Wand2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
                 {t('promptOptimize.title')}
               </h2>
             </div>
             <button
               onClick={handleClose}
-              className="p-4 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              <X className="h-10 w-10 text-gray-500 dark:text-gray-400" />
+              <X className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
 
-          <div className="flex-1 flex flex-col px-8 py-4 min-h-0 overflow-hidden">
+          <div className="flex-1 flex flex-col px-5 py-4 min-h-0 overflow-hidden">
             <div className="mb-4 flex-shrink-0">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-6">
-                  <h3 className="text-5xl font-bold text-gray-700 dark:text-gray-300">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                     {t('promptOptimize.inputLabel')}
                   </h3>
                   {optimizedResults.length > 0 && (
-                    <div className="flex items-center gap-3 px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
                       {isOptimizing ? (
                         <>
-                          <Loader2 className="h-8 w-8 animate-spin text-purple-600 dark:text-purple-400" />
-                          <span className="text-3xl font-semibold text-purple-600 dark:text-purple-400">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-600 dark:text-purple-400" />
+                          <span className="text-xs font-medium text-purple-600 dark:text-purple-400">
                             {t('promptOptimize.generating', {
                               running: runningTaskCount,
                               total: OPTIMIZE_COUNT,
@@ -176,8 +176,8 @@ export const PromptOptimizeDialog = memo(
                         </>
                       ) : (
                         <>
-                          <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
-                          <span className="text-3xl font-semibold text-green-600 dark:text-green-400">
+                          <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                          <span className="text-xs font-medium text-green-600 dark:text-green-400">
                             {t('promptOptimize.completed', {
                               completed: completedTaskCount,
                               total: OPTIMIZE_COUNT,
@@ -188,29 +188,27 @@ export const PromptOptimizeDialog = memo(
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
                   {isOptimizing && (
                     <button
                       onClick={handleStopOptimize}
-                      className="flex items-center gap-5 px-12 py-6 rounded-2xl text-4xl font-bold
+                      className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium
                                  bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600
-                                 text-white transition-all duration-200 hover:scale-105
-                                 shadow-xl flex-shrink-0"
+                                 text-white transition-colors flex-shrink-0"
                     >
-                      <Square className="h-10 w-10" />
+                      <Square className="h-4 w-4" />
                       {t('promptOptimize.stop')}
                     </button>
                   )}
                   <button
                     onClick={handleStartOptimize}
                     disabled={!optimizeInput.trim() || isOptimizing}
-                    className="flex items-center gap-5 px-12 py-6 rounded-2xl text-4xl font-bold
+                    className="flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium
                                bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600
-                               text-white transition-all duration-200 hover:scale-105
-                               disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-                               shadow-xl flex-shrink-0"
+                               text-white transition-colors
+                               disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                   >
-                    <Wand2 className="h-10 w-10" />
+                    <Wand2 className="h-4 w-4" />
                     {isOptimizing
                       ? t('promptOptimize.generatingButton')
                       : t('promptOptimize.generate')}
@@ -222,9 +220,9 @@ export const PromptOptimizeDialog = memo(
                 onChange={(e) => setOptimizeInput(e.target.value)}
                 placeholder={t('promptOptimize.placeholder')}
                 rows={3}
-                className="w-full p-8 bg-gray-50 dark:bg-gray-800 rounded-2xl
-                           text-gray-900 dark:text-gray-200 text-4xl leading-relaxed
-                           border-2 border-gray-300 dark:border-gray-600
+                className="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl
+                           text-gray-900 dark:text-gray-200 text-sm leading-relaxed
+                           border border-gray-300 dark:border-gray-600
                            focus:border-purple-500 dark:focus:border-purple-400
                            focus:outline-none resize-none
                            placeholder:text-gray-400 dark:placeholder:text-gray-500"
@@ -232,25 +230,25 @@ export const PromptOptimizeDialog = memo(
             </div>
 
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <h3 className="text-5xl font-bold text-gray-700 dark:text-gray-300 mb-3 flex-shrink-0">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex-shrink-0">
                 {t('promptOptimize.resultsLabel')}
               </h3>
               {optimizedResults.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden">
-                  <p className="text-5xl text-gray-500 dark:text-gray-400">
+                <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 overflow-hidden">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {t('promptOptimize.empty')}
                   </p>
                 </div>
               ) : (
-                <div className="flex-1 grid grid-cols-5 gap-4 overflow-hidden">
+                <div className="flex-1 grid grid-cols-5 gap-3 overflow-hidden">
                   {optimizedResults.map((result, index) => (
                     <div
                       key={result.id}
-                      className="relative group bg-purple-50 dark:bg-purple-900/20 rounded-2xl border-2 border-purple-300 dark:border-purple-700 overflow-hidden hover:shadow-lg transition-all h-full flex flex-col"
+                      className="relative group bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-300 dark:border-purple-700 overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col"
                     >
                       {result.isLoading ? (
-                        <div className="flex-1 flex items-center justify-center p-8">
-                          <Loader2 className="h-24 w-24 animate-spin text-purple-600 dark:text-purple-400" />
+                        <div className="flex-1 flex items-center justify-center p-4">
+                          <Loader2 className="h-6 w-6 animate-spin text-purple-600 dark:text-purple-400" />
                         </div>
                       ) : (
                         <>
@@ -259,32 +257,32 @@ export const PromptOptimizeDialog = memo(
                               e.stopPropagation();
                               void handleCopyOptimized(index, result.content);
                             }}
-                            className="absolute top-4 right-4 p-5 rounded-lg
+                            className="absolute top-2 right-2 p-1.5 rounded-md
                                      bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800
                                      border border-gray-300 dark:border-gray-600
-                                     opacity-0 group-hover:opacity-100 transition-all
-                                     shadow-md hover:shadow-lg z-10"
+                                     opacity-0 group-hover:opacity-100 transition-opacity
+                                     shadow-sm z-10"
                             title={t('promptOptimize.copy')}
                           >
                             {copiedIndex === index ? (
-                              <Check className="h-10 w-10 text-green-600 dark:text-green-400" />
+                              <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                             ) : (
-                              <Copy className="h-10 w-10 text-gray-700 dark:text-gray-300" />
+                              <Copy className="h-3.5 w-3.5 text-gray-700 dark:text-gray-300" />
                             )}
                           </button>
 
                           <div
-                            className="flex-1 p-10 overflow-y-auto cursor-pointer scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-transparent hover:scrollbar-thumb-purple-400"
+                            className="flex-1 p-3 overflow-y-auto cursor-pointer scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-transparent hover:scrollbar-thumb-purple-400"
                             onClick={() => handleUseOptimized(result.content)}
                             style={{ scrollbarWidth: 'thin' }}
                           >
-                            <p className="text-gray-900 dark:text-gray-200 text-3xl leading-relaxed whitespace-pre-wrap">
+                            <p className="text-gray-900 dark:text-gray-200 text-xs leading-relaxed whitespace-pre-wrap">
                               {result.content || t('chatpage.generating')}
                             </p>
                           </div>
 
-                          <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-purple-100 dark:from-purple-900/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <p className="text-3xl font-medium text-purple-900 dark:text-purple-100 text-center">
+                          <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-purple-100 dark:from-purple-900/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <p className="text-xs font-medium text-purple-900 dark:text-purple-100 text-center">
                               {t('promptOptimize.useThis')}
                             </p>
                           </div>
@@ -297,13 +295,13 @@ export const PromptOptimizeDialog = memo(
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-4 px-8 py-4 border-t-4 border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
             <button
               onClick={handleClose}
-              className="px-12 py-6 rounded-2xl text-4xl font-bold
+              className="h-10 rounded-xl px-4 text-sm font-medium
                          bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600
                          text-gray-900 dark:text-gray-100
-                         transition-colors shadow-lg"
+                         transition-colors"
             >
               {t('promptOptimize.close')}
             </button>

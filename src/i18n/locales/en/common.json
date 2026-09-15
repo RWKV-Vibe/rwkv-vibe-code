@@ -19,7 +19,6 @@
     "generating": "Generating...",
     "preparingRender": "Preparing preview...",
     "generationFailed": "Generation failed",
-    "layoutMode": "Layout",
     "backToHome": "Back to home",
     "selectPrompt": "Pick a preset to get started",
     "optimizePrompt": "Optimize prompt",

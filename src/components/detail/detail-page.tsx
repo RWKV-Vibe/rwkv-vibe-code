@@ -112,21 +112,21 @@ export const DetailPage = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background dark:bg-[#1e1e1e]">
-      <div className="h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36 border-b-2 border-border dark:border-gray-700 bg-white dark:bg-[#252525] flex items-center justify-between px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20">
-        <div className="flex items-center gap-4 sm:gap-6 md:gap-8 lg:gap-12">
+      <div className="h-14 flex-shrink-0 border-b border-border dark:border-gray-700 bg-white dark:bg-[#252525] flex items-center justify-between px-4">
+        <div className="flex items-center gap-3">
           {resultIndex !== undefined && !Number.isNaN(resultIndex) && (
-            <div className="flex items-center gap-4">
-              <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
                 {t('detailpage.solution', { number: resultIndex + 1 })}
               </span>
               {isLiveUpdating && !hasUserEdited && (
-                <span className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900 rounded-full text-sm font-semibold text-blue-600 dark:text-blue-300 animate-pulse">
-                  <span className="w-2 h-2 bg-blue-600 dark:bg-blue-300 rounded-full" />
+                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-100 dark:bg-blue-900 rounded-full text-xs font-medium text-blue-600 dark:text-blue-300 animate-pulse">
+                  <span className="w-1.5 h-1.5 bg-blue-600 dark:bg-blue-300 rounded-full" />
                   <span>{t('detailpage.liveUpdating')}</span>
                 </span>
               )}
               {hasUserEdited && (
-                <span className="flex items-center gap-2 px-4 py-2 bg-orange-100 dark:bg-orange-900 rounded-full text-sm font-semibold text-orange-600 dark:text-orange-300">
+                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-orange-100 dark:bg-orange-900 rounded-full text-xs font-medium text-orange-600 dark:text-orange-300">
                   <span>{t('detailpage.editMode')}</span>
                 </span>
               )}
@@ -134,32 +134,32 @@ export const DetailPage = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4 md:gap-6 lg:gap-8">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => void handleCopy()}
-            className="flex items-center gap-3 md:gap-4 px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 lg:px-12 lg:py-6 xl:px-14 xl:py-7 rounded-2xl text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-[1.02] shadow-lg"
+            className="flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
-            <Copy className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14" />
-            <span className="hidden md:inline">
+            <Copy className="h-4 w-4" />
+            <span>
               {copied ? t('detailpage.copied') : t('detailpage.copyCode')}
             </span>
           </button>
           <button
             onClick={handleDownload}
-            className="flex items-center gap-3 md:gap-4 px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 lg:px-12 lg:py-6 xl:px-14 xl:py-7 rounded-2xl text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 hover:scale-[1.02] shadow-xl hover:shadow-2xl"
+            className="flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
           >
-            <Download className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14" />
-            <span className="hidden md:inline">{t('detailpage.download')}</span>
+            <Download className="h-4 w-4" />
+            <span>{t('detailpage.download')}</span>
           </button>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        <div className="w-full lg:w-1/2 h-1/2 lg:h-full border-b-2 lg:border-b-0 lg:border-r-2 border-border dark:border-gray-700 bg-[#1e1e1e]">
+        <div className="w-full lg:w-1/2 h-1/2 lg:h-full border-b lg:border-b-0 lg:border-r border-border dark:border-gray-700 bg-[#1e1e1e]">
           <div className="h-full flex flex-col">
-            <div className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 py-4 sm:py-5 md:py-6 lg:py-8 xl:py-10 bg-[#252525] border-b-2 border-gray-700">
-              <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-gray-300 font-bold flex items-center gap-3 md:gap-4 lg:gap-6">
-                <Code2 className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-16 lg:w-16 xl:h-20 xl:w-20" />
+            <div className="px-4 py-2.5 bg-[#252525] border-b border-gray-700">
+              <span className="text-sm text-gray-300 font-medium flex items-center gap-2">
+                <Code2 className="h-4 w-4" />
                 {t('detailpage.codeEditor')}
               </span>
             </div>
@@ -199,13 +199,13 @@ export const DetailPage = () => {
 
         <div className="w-full lg:w-1/2 h-1/2 lg:h-full bg-white">
           <div className="h-full flex flex-col">
-            <div className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 py-4 sm:py-5 md:py-6 lg:py-8 xl:py-10 bg-gray-50 dark:bg-[#252525] border-b-2 border-border dark:border-gray-700">
+            <div className="px-4 py-2.5 bg-gray-50 dark:bg-[#252525] border-b border-border dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-gray-700 dark:text-gray-300 font-bold flex items-center gap-3 md:gap-4 lg:gap-6">
-                  <Eye className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-16 lg:w-16 xl:h-20 xl:w-20" />
+                <span className="text-sm text-gray-700 dark:text-gray-300 font-medium flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
                   {t('detailpage.preview')}
                 </span>
-                <span className="hidden lg:inline text-xl md:text-2xl lg:text-3xl xl:text-4xl text-gray-500 dark:text-gray-400 font-semibold">
+                <span className="hidden lg:inline text-xs text-gray-500 dark:text-gray-400">
                   {t('detailpage.updateRealtime')}
                 </span>
               </div>

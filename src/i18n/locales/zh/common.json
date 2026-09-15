@@ -19,7 +19,6 @@
     "generating": "生成中...",
     "preparingRender": "准备渲染预览...",
     "generationFailed": "生成失败",
-    "layoutMode": "布局",
     "backToHome": "返回首页",
     "selectPrompt": "选择一个预设模板开始",
     "optimizePrompt": "优化 Prompt",
