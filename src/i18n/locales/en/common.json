@@ -5,13 +5,51 @@
     "clearCache": "Clear local cache",
     "clearCacheTitle": "Clear local cache",
     "clearCacheConfirm": "Clear local cache? This will remove login info, chat history, and model settings.",
+    "groups": {
+      "page": "Sites & apps",
+      "scene": "3D scenes"
+    },
     "suggestions": {
-      "hotel": "Generate a hotel page in Shenzhen with a green theme",
-      "museum": "Create a Lu Xun Memorial Museum website with parchment scroll color scheme, including biography, literary works display, and historical photo gallery",
-      "cafe": "Create a cozy local coffee shop website with warm color palette including light beige, cream white, and soft wood tones, paired with elegant typography using serif fonts and moderate spacing. Homepage includes brand introduction, menu showcase, event information, and contact details, with concise content highlighting the cafe's unique character and atmosphere",
-      "retroShop": "Create a 90s retro-style shop webpage named 'Electronic Museum' with cyberpunk color scheme including highly saturated neon pink, cyan, and charcoal black background, featuring six retro product cards and six nostalgic news items at the bottom, creating a nostalgic cyberpunk visual experience",
-      "pomodoro": "Create an immersive Pomodoro timer webpage. Features: Default 25-minute countdown with 'Start', 'Pause', and 'Reset' buttons. Browser native alert when countdown ends. Visual: Centered large digital time display with gradient background (pink to purple)",
-      "saas": "Build a professional SaaS product landing page with feature descriptions and pricing plans"
+      "hotel": {
+        "label": "Hotel website",
+        "prompt": "Create a boutique hotel website for Shenzhen using a green palette of forest green (#1B4332), sage (#95D5B2) and off-white (#F8F9F4), with a sans-serif typeface and generous white space. Include: hotel introduction, four room cards (room type, size, nightly rate), amenities and services, nearby attractions, and booking contact details, all in a calm, airy holiday mood"
+      },
+      "museum": {
+        "label": "Lu Xun Memorial",
+        "prompt": "Create a Lu Xun Memorial Museum website in a parchment-scroll palette of aged paper (#EFE3C8), ink black (#2B2B2B) and seal red (#8C3A2B), with serif headings. Include: a life timeline, six cards showcasing his major literary works, a historical photo gallery, quoted passages, and visitor information, evoking a quiet, literary atmosphere"
+      },
+      "cafe": {
+        "label": "Local coffee shop",
+        "prompt": "Create a cozy local coffee shop website with a warm palette of light beige (#F5EFE6), cream white (#FFFDF7) and soft wood brown (#8B7355), paired with serif typography and moderate spacing. Include a brand story, a menu of six drinks with prices, weekend event information, and the shop address with opening hours — concise copy that highlights the pour-over craft and the relaxed atmosphere"
+      },
+      "retroShop": {
+        "label": "90s Electronic Museum",
+        "prompt": "Create a 90s retro shop webpage named 'Electronic Museum' with a cyberpunk palette of highly saturated neon pink (#FF10F0), cyan (#00FFFF) and charcoal black background (#1A1A1A), with pixel or monospace headings. Include six retro product cards (name, year, price) and six nostalgic news items at the bottom, with a neon glow on card hover, creating a nostalgic cyberpunk visual experience"
+      },
+      "pomodoro": {
+        "label": "Pomodoro timer",
+        "prompt": "Create an immersive Pomodoro timer webpage. Features: a default 25-minute countdown with 'Start', 'Pause' and 'Reset' buttons, and a native browser alert when the countdown ends. Visual: a huge centered monospace clock over a pink (#FF6B9D) to purple (#7B2FF7) gradient background, with frosted-glass buttons and a clean, focused feel"
+      },
+      "saas": {
+        "label": "SaaS landing page",
+        "prompt": "Build a professional SaaS product landing page in deep navy (#0F172A), bright blue (#3B82F6) and light grey (#F1F5F9) with a sans-serif typeface. Include: a hero (headline, subheadline, call-to-action), six feature cards, three pricing tiers with a feature comparison and a highlighted recommendation, customer testimonials, an FAQ, and a footer — specific, professional copy and a clear conversion path"
+      },
+      "energyCore": {
+        "label": "Neon energy core",
+        "prompt": "Use Three.js to create a dark sci-fi energy core scene. Structure: a glowing energy sphere floating at the center (cyan #22D3EE blended with purple #8B5CF6), three metallic rings rotating slowly on different axes around it, roughly 800 tiny blue-violet particles drifting nearby, a soft halo on the ground, and a near-black background (#05050A). Interaction: drag to orbit the camera, scroll to zoom. Implementation: load Three.js and OrbitControls from a CDN and rely on built-in APIs such as SphereGeometry, TorusGeometry, MeshStandardMaterial, PointLight and Points; avoid complex shaders and heavy math, keep the code short"
+      },
+      "blackHole": {
+        "label": "Black hole disk",
+        "prompt": "Use Three.js to create a minimal black hole scene. Structure: a pure black sphere at the center (#000000, no specular highlight), a bright blue-violet accretion disk around it (#4C1D95 to #60A5FA) rotating slowly on the horizontal plane, roughly 2000 tiny star-dust particles scattered around, and a deep black background for a sense of cosmic depth. Interaction: drag to orbit the camera, scroll to zoom. Implementation: load Three.js and OrbitControls from a CDN and build the glow layers with TorusGeometry, SphereGeometry, Points and AdditiveBlending; no physics simulation"
+      },
+      "portal": {
+        "label": "Sci-fi portal",
+        "prompt": "Use Three.js to create a dark sci-fi portal scene. Structure: a large metallic ring standing upright at the center (dark grey #3F4A5A, metallic finish), a translucent blue energy veil inside it (#38BDF8), 12 small glowing modules spaced evenly around the rim, and a few particles with a thin haze around it. Motion: the veil brightens and dims in a roughly 3-second breathing cycle while the metal ring turns slowly. Interaction: drag to orbit the camera, scroll to zoom. Implementation: load Three.js and OrbitControls from a CDN and prefer TorusGeometry, CircleGeometry, MeshStandardMaterial, PointLight and Points over shader and math code"
+      },
+      "mechCube": {
+        "label": "Floating mech cube",
+        "prompt": "Use Three.js to create a futuristic floating cube scene. Structure: a dark metallic cube hovering at the center (#1F2937), wrapped in two translucent wireframe shells, with six cyan glowing modules (#22D3EE) attached to its faces; each layer rotates slowly in an opposite direction at its own speed. The background is pure black (#000000), blue motes drift around, and a soft ring of light sits underneath. Interaction: drag to orbit the camera, scroll to zoom. Implementation: load Three.js and OrbitControls from a CDN and prefer BoxGeometry, EdgesGeometry, LineSegments, MeshStandardMaterial and PointLight, keeping the code short"
+      }
     }
   },
   "chatpage": {
@@ -40,7 +78,8 @@
     "editMode": "Edit mode"
   },
   "aiService": {
-    "promptPrefix": "with HTML and the Tailwind CSS CDN, create a complete, production-quality single-page website that opens as-is. It must include a top nav, a hero with a real headline, copy, and image, at least three filled content sections (image+text / feature cards / stats or lists), and a footer. Fill the page with real Unsplash photos, polished typography, and a coherent palette. No empty solid/gradient pages and no truncated code. Output only the full document from <!DOCTYPE html> to </html>, no explanation. Request:",
+    "promptPrefix": "Using HTML and the Tailwind CSS CDN, create a complete, production-quality single-page website that opens as-is. Lay the page out in this order: a top nav; a hero with a big headline, real copy, and an image; three or more content sections (image+text / feature cards / stats or lists); a footer. Fill every section with specific copy and real Unsplash photos, with polished typography and one coherent palette. Output code only, starting at the first line <!DOCTYPE html> and running all the way to the closing </html>. Request:",
+    "scenePromptPrefix": "Write a single-file HTML page with a 3D scene that opens directly in a browser. Load Three.js and OrbitControls from a CDN, make the canvas fill the viewport and resize with the window, and include a scene, camera, renderer, lighting and a requestAnimationFrame loop. Prefer Three.js built-in geometries, materials, lights and Points over complex shaders or heavy math, and keep the code short enough to run correctly on the first try. Output code only, starting at the first line <!DOCTYPE html> and running all the way to the closing </html>. Request:",
     "streamNotAvailable": "ReadableStream not available",
     "httpError": "HTTP {{status}} {{statusText}} {{text}}",
     "generationFailed": "Generation failed"

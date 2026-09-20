@@ -8,19 +8,35 @@ import { extractHTMLCode, shouldTriggerRender } from '@/lib/html';
 const PROMPT_OPTIMIZE_SYSTEM = `你是一个专业的网页设计 prompt 优化专家。用户会给你一个网页生成的需求描述，你需要将其优化成更详细、更专业的 prompt，帮助 AI 生成更好的网页。
 
 优化要点：
-1. **具体的配色方案**：不要只说"现代配色"或"暖色调"，要指定具体颜色，如"浅米色(#F5F5DC)、奶油白(#FFFDD0)、木质棕(#8B7355)"、"霓虹粉(#FF10F0)、青色(#00FFFF)、炭黑(#1A1A1A)"等
+1. **具体的配色方案**：把"现代配色""暖色调"这类说法换成具体颜色名加色值，如"浅米色(#F5F5DC)、奶油白(#FFFDD0)、木质棕(#8B7355)"、"霓虹粉(#FF10F0)、青色(#00FFFF)、炭黑(#1A1A1A)"等
 2. **精确的数量和布局**：明确元素数量，如"六个商品卡片"、"三栏布局"、"4x3网格"等
 3. **详细的排版细节**：指定字体类型（衬线/无衬线）、字号、间距、行高等，如"使用衬线字体，适度的间距"
 4. **功能和视觉分离**：将需求分为"功能"和"视觉"两部分描述，如"功能：默认25分钟倒计时，有开始、暂停、重置按钮。视觉：居中显示巨大的数字，渐变背景（从粉色到紫色）"
 5. **具体的模块列表**：明确列出页面包含的功能模块，如"品牌介绍、菜单展示、活动信息、联系方式"
 6. **氛围和体验描述**：用形容词描述整体感觉，如"营造怀旧、赛博朋克的视觉体验"、"突出咖啡馆的温馨氛围"
 7. **交互细节**：说明具体的交互行为，如"倒计时结束时弹出浏览器原生 Alert"、"卡片悬停时显示详情"
+8. **三维场景另走一套**：如果需求是 Three.js / WebGL / 3D 场景，不要把它改写成带导航栏和页脚的网页。按"结构 / 动效 / 交互 / 实现"四段来写：结构说清中心物体、外层结构的数量和颜色、粒子数量和背景色；动效说清各层的旋转方向和速度；交互写"鼠标拖动旋转视角，滚轮缩放"；实现写明通过 CDN 引入 Three.js 和 OrbitControls，并点名要用的现成 API（如 SphereGeometry、TorusGeometry、Points、AdditiveBlending），强调避免复杂 Shader 和数学计算
 
 参考示例风格：
 - "创建一个温馨的本地咖啡馆官网，采用暖色调配色方案，包括浅米色、奶油白和柔和的木质色系，搭配优雅的排版风格，使用衬线字体和适度的间距。首页包含品牌介绍、菜单展示、活动信息和联系方式等模块"
 - "创建一个90年代复古风格的商店网页，采用赛博朋克配色方案，包括饱和度极高的霓虹粉、青色和炭黑背景，有六个复古商品的卡片，底部有六个新闻项，营造怀旧、赛博朋克的视觉体验"
+- "用 Three.js 创建一个极简黑洞场景。结构：中央是一颗纯黑球体（#000000），外围一圈蓝紫色吸积盘（#4C1D95 到 #60A5FA）缓慢旋转，周围散布约 2000 颗星尘粒子。交互：鼠标拖动旋转视角，滚轮缩放。实现：CDN 引入 Three.js 和 OrbitControls，用 TorusGeometry、Points、AdditiveBlending 做发光层次，不写物理模拟"
 
-重要：请直接输出优化后的 prompt 纯文本内容，不要使用任何代码块标记（如 \`\`\`），不要有任何多余的解释或说明文字，只输出优化后的 prompt 本身。`;
+输出格式：输出内容就是优化后的 prompt 纯文本本身，第一个字符即 prompt 的第一个字，最后一个字符即 prompt 的最后一个字。`;
+
+/**
+ * Three.js 场景要的是一块铺满全屏的 canvas，套上网页前缀里的导航栏、页脚和 Unsplash 配图
+ * 只会把画面写坏，所以这类需求切到场景前缀。示例模板里的四个场景都会命中 three.js 这个词。
+ */
+const SCENE_REQUEST_PATTERN = /three\s*\.?\s*js|webgl|orbitcontrols|\b3d\b/i;
+
+/** 把用户需求拼成最终提示词：按需求类型选网页前缀还是三维场景前缀 */
+export const buildGenerationPrompt = (userMessage: string) =>
+  `${i18n.t(
+    SCENE_REQUEST_PATTERN.test(userMessage)
+      ? 'aiService.scenePromptPrefix'
+      : 'aiService.promptPrefix',
+  )} ${userMessage}`;
 
 interface ChatStreamOptions {
   contents: string[];
@@ -104,10 +120,10 @@ export class AIService {
     abortController?: AbortController,
   ): Promise<Array<{ content: string; htmlCode: string }>> {
     const controller = abortController ?? new AbortController();
+    const prompt = buildGenerationPrompt(userMessage);
     const contents = Array.from(
       { length: count },
-      () =>
-        `User: ${i18n.t('aiService.promptPrefix')} ${userMessage}\n\nAssistant: <think></think`,
+      () => `User: ${prompt}\n\nAssistant: <think></think`,
     );
 
     const contentBuffers = Array.from({ length: count }, () => '');

@@ -15,15 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { IconTooltip } from '@/components/ui/tooltip';
 import { useGeneration } from '@/hooks/use-generation';
 import { useIframeQueue } from '@/hooks/use-iframe-queue';
-
-const SUGGESTION_KEYS = [
-  'hotel',
-  'museum',
-  'cafe',
-  'retroShop',
-  'pomodoro',
-  'saas',
-] as const;
+import { SUGGESTIONS } from '@/lib/suggestions';
 
 export const ChatPage = () => {
   const router = useRouter();
@@ -64,7 +56,13 @@ export const ChatPage = () => {
   }, [initialPrompt]);
 
   const suggestions = useMemo(
-    () => SUGGESTION_KEYS.map((key) => t(`homepage.suggestions.${key}`)),
+    () =>
+      SUGGESTIONS.map(({ key, Icon }) => ({
+        key,
+        Icon,
+        label: t(`homepage.suggestions.${key}.label`),
+        prompt: t(`homepage.suggestions.${key}.prompt`),
+      })),
     [t],
   );
 
@@ -177,22 +175,41 @@ export const ChatPage = () => {
 
       <main className="flex-1 overflow-y-auto p-4">
         {results.length === 0 ? (
-          <div className="mx-auto flex h-full max-w-4xl flex-col items-center justify-center gap-6">
-            <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300">
+          <div className="mx-auto flex min-h-full max-w-4xl flex-col justify-center gap-6 py-6">
+            <h2 className="text-center text-xl font-semibold text-gray-700 dark:text-gray-300">
               {t('chatpage.selectPrompt')}
             </h2>
             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
-              {suggestions.map((suggestion) => (
+              {suggestions.map(({ key, Icon, label, prompt }) => (
                 <button
-                  key={suggestion}
-                  onClick={() => handleGenerate(suggestion)}
-                  className="line-clamp-2 rounded-xl border border-gray-200 bg-white px-4 py-3
-                             text-left text-sm text-gray-700 transition-colors
-                             hover:border-blue-400 hover:bg-blue-50
-                             dark:border-gray-700 dark:bg-[#2a2a2a] dark:text-gray-200
-                             dark:hover:border-blue-500 dark:hover:bg-[#343434]"
+                  key={key}
+                  onClick={() => handleGenerate(prompt)}
+                  title={prompt}
+                  className="group flex h-full items-start gap-3 rounded-xl border border-gray-200
+                             bg-white p-3.5 text-left transition duration-200
+                             hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-lg
+                             hover:shadow-blue-500/5 focus-visible:outline-none
+                             focus-visible:ring-2 focus-visible:ring-blue-500
+                             dark:border-white/10 dark:bg-white/[0.04]
+                             dark:hover:border-blue-400/40 dark:hover:bg-white/[0.07]"
                 >
-                  {suggestion}
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
+                               bg-blue-50 text-blue-600 transition-colors
+                               group-hover:bg-blue-600 group-hover:text-white
+                               dark:bg-blue-500/10 dark:text-blue-400
+                               dark:group-hover:bg-blue-500 dark:group-hover:text-white"
+                  >
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {label}
+                    </span>
+                    <span className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                      {prompt}
+                    </span>
+                  </span>
                 </button>
               ))}
             </div>
