@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Eye, Code2, Copy, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_DETAIL_HTML, isPlaceholderHtml } from '@/lib/html';
+import { suppressTailwindWarning } from '@/lib/preview';
 import {
   createDetailChannel,
   loadChatResults,
@@ -28,6 +29,11 @@ export const DetailPage = () => {
       : undefined;
 
   const [htmlCode, setHtmlCode] = useState(DEFAULT_DETAIL_HTML);
+  /* 编辑器里保留干净的原文；只有预览 iframe 注入静音脚本 */
+  const previewSrcDoc = useMemo(
+    () => suppressTailwindWarning(htmlCode),
+    [htmlCode],
+  );
   const [copied, setCopied] = useState(false);
   const [hasUserEdited, setHasUserEdited] = useState(false);
   const [isLiveUpdating, setIsLiveUpdating] = useState(false);
@@ -212,7 +218,7 @@ export const DetailPage = () => {
             </div>
             <div className="flex-1 overflow-auto">
               <iframe
-                srcDoc={htmlCode}
+                srcDoc={previewSrcDoc}
                 className="w-full h-full border-0 bg-white"
                 title="Preview"
                 sandbox="allow-scripts allow-forms allow-modals allow-same-origin"

@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 /** HTML vibe coding 微调好的 state，走真实后端时始终启用 */
-const STATE_ID = 'html_vibe_ctx2048.pth';
+// const STATE_ID = 'html_vibe_ctx2048.pth';
 
 export async function POST(request: Request) {
   const payload = (await request.json()) as Record<string, unknown>;
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
   const backendPayload: Record<string, unknown> = {
     ...payload,
-    state_id: STATE_ID,
+    // state_id: STATE_ID, // 暂时注释：该 state 在当前后端不存在
   };
   delete backendPayload.apiUrl;
 

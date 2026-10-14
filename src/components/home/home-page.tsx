@@ -6,6 +6,18 @@ import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import { ChatgptPromptInput } from '@/components/business/chatgpt-prompt-input';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   CHAT_INITIAL_MESSAGE_KEY,
@@ -42,14 +54,12 @@ export const HomePage = () => {
   };
 
   const handleClearCache = () => {
-    if (confirm(t('homepage.clearCacheConfirm'))) {
-      clearAppCache({
-        includeAuth: true,
-        includeModelSettings: true,
-        includeSessionStorage: true,
-      });
-      logout();
-    }
+    clearAppCache({
+      includeAuth: true,
+      includeModelSettings: true,
+      includeSessionStorage: true,
+    });
+    logout();
   };
 
   return (
@@ -60,20 +70,50 @@ export const HomePage = () => {
        */}
       <header className="flex h-14 shrink-0 items-center justify-between px-4 sm:px-6">
         <span className="text-sm font-semibold tracking-tight text-gray-900 dark:text-white">
-          RWKV <span className="text-blue-600 dark:text-blue-400">Vibe Code</span>
+          RWKV{' '}
+          <span className="text-blue-600 dark:text-blue-400">Vibe Code</span>
         </span>
 
         <div className="flex items-center gap-1">
-          <button
-            onClick={handleClearCache}
-            className="flex h-10 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-10 gap-1.5 rounded-lg px-2.5 text-xs
                        text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600
                        dark:text-gray-400 dark:hover:bg-red-500/10 dark:hover:text-red-400"
-            title={t('homepage.clearCacheTitle')}
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('homepage.clearCache')}</span>
-          </button>
+                title={t('homepage.clearCacheTitle')}
+                aria-label={t('homepage.clearCacheTitle')}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">
+                  {t('homepage.clearCache')}
+                </span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="max-w-md rounded-2xl dark:border-white/10 dark:bg-[#2a2a2a]">
+              <AlertDialogHeader>
+                <div className="mb-2 flex size-11 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                  <Trash2 className="size-5" aria-hidden="true" />
+                </div>
+                <AlertDialogTitle>
+                  {t('homepage.clearCacheTitle')}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('homepage.clearCacheConfirm')}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleClearCache}
+                  className={buttonVariants({ variant: 'destructive' })}
+                >
+                  {t('homepage.clearCache')}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <LanguageSwitcher />
         </div>
       </header>

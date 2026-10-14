@@ -54,12 +54,57 @@ export const postPreviewScroll = (
 };
 
 /**
+ * 预览页用的是 Tailwind Play CDN（cdn.tailwindcss.com），它每次加载都会往控制台
+ * 打一条「should not be used in production」的告警。对这些沙箱 iframe 里一次性渲染的
+ * 单文件页面来说，CDN 就是正确选择、也谈不上「生产」，所以这条告警纯属噪音。
+ * 这段脚本在 Tailwind 脚本之前把 console.warn 里这一条过滤掉，其它告警照常。
+ */
+const TAILWIND_WARNING_SUPPRESSOR = `<script>
+(function () {
+  var warn = console.warn;
+  console.warn = function () {
+    var first = arguments[0];
+    if (typeof first === 'string' && first.indexOf('cdn.tailwindcss.com') !== -1) {
+      return;
+    }
+    return warn.apply(console, arguments);
+  };
+})();
+</script>`;
+
+/**
+ * 把一段脚本插到文档 <head> 开头（紧跟在 <head> 之后），保证它早于页面里的
+ * Tailwind CDN <script> 执行。必须让 <!DOCTYPE> 仍是文档的第一个节点 ——
+ * 一旦在它之前插东西就会掉进 quirks 模式、把生成页面的布局搞坏，所以绝不前置。
+ */
+const injectIntoHead = (html: string, snippet: string): string => {
+  const headMatch = html.match(/<head[^>]*>/i);
+  if (headMatch?.index !== undefined) {
+    const at = headMatch.index + headMatch[0].length;
+    return `${html.slice(0, at)}\n${snippet}${html.slice(at)}`;
+  }
+  const htmlMatch = html.match(/<html[^>]*>/i);
+  if (htmlMatch?.index !== undefined) {
+    const at = htmlMatch.index + htmlMatch[0].length;
+    return `${html.slice(0, at)}\n<head>${snippet}</head>${html.slice(at)}`;
+  }
+  // 没有 html/head 结构（极少见）：此时本就没有规范文档结构，直接前置即可
+  return `${snippet}${html}`;
+};
+
+/** 给预览文档静音 Tailwind CDN 的生产告警（在 <head> 开头注入过滤脚本） */
+export const suppressTailwindWarning = (html: string): string =>
+  injectIntoHead(html, TAILWIND_WARNING_SUPPRESSOR);
+
+/**
  * 在生成的 HTML 末尾追加一小段桥接脚本：
  * 1. 回报整页 scrollHeight，父页面据此判断还能往下滚多少；
  * 2. 接收父页面的滚动指令，在 iframe 内部滚动页面。
+ *
+ * 同时在 <head> 开头静音 Tailwind CDN 的生产告警。
  */
 export const withHeightReporter = (html: string, id: string): string =>
-  `${html}
+  `${suppressTailwindWarning(html)}
 <script>
 (function () {
   var id = ${JSON.stringify(id)};
